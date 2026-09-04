@@ -8,11 +8,15 @@ import {
   FileJson,
   Trash2,
   HelpCircle,
-  LayoutTemplate,
   Check,
   ChevronDown,
-  LayoutDashboard,
+  Star,
+  Share2,
+  Play,
   Users,
+  Smile,
+  Timer,
+  Menu,
 } from 'lucide-react';
 import type { BoardMetadata, User, CollaboratorPresence } from '../../types/whiteboard';
 
@@ -36,6 +40,7 @@ interface TopNavProps {
   isSimulating: boolean;
   onToggleSimulation: () => void;
   saveStatus: 'saved' | 'saving';
+  onToggleStar?: () => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -49,7 +54,6 @@ export const TopNav: React.FC<TopNavProps> = ({
   onExportJson,
   onImportJson,
   onClearBoard,
-  onOpenTemplates,
   onOpenShortcuts,
   onOpenDashboard,
   onOpenAuth,
@@ -62,6 +66,10 @@ export const TopNav: React.FC<TopNavProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(metadata.title);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showMainMenu, setShowMainMenu] = useState(false);
+  const [isStarred, setIsStarred] = useState(metadata.isStarred || false);
+  const [showShareToast, setShowShareToast] = useState(false);
+  const [showReactions, setShowReactions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleTitleSubmit = () => {
@@ -73,46 +81,118 @@ export const TopNav: React.FC<TopNavProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onImportJson(file);
-    }
-    if (e.target) e.target.value = '';
-    setShowExportMenu(false);
+  const handleShareClick = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setShowShareToast(true);
+    setTimeout(() => setShowShareToast(false), 2500);
   };
 
   return (
-    <header className="top-nav-container">
-      {/* Left: Brand, Dashboard Switcher & Editable Title */}
-      <div className="top-nav-left">
-        <button
-          className="brand-badge clickable-brand"
-          onClick={onOpenDashboard}
-          title="Open My Boards Workspace"
-        >
-          <div className="brand-logo-icon">
-            <span className="brand-m">M</span>
+    <header className="ziro-top-bar" aria-label="Ziro Navigation Bar">
+      {/* Left Section: Logo, Main Menu, Breadcrumbs, Title, Star & Save status */}
+      <div className="ziro-top-left">
+        {/* Main Menu Hamburger */}
+        <div className="relative">
+          <button
+            className="ziro-menu-btn"
+            onClick={() => setShowMainMenu((prev) => !prev)}
+            title="Main Menu"
+          >
+            <Menu size={18} strokeWidth={2.2} />
+          </button>
+
+          {showMainMenu && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowMainMenu(false)} />
+              <div className="ziro-main-menu-popover">
+                <div className="ziro-menu-header">
+                  <div className="ziro-brand-icon">
+                    <span>Z</span>
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-slate-900">Ziro Whiteboard</div>
+                    <div className="text-xs text-slate-500">Collaborative Workspace</div>
+                  </div>
+                </div>
+
+                <div className="dropdown-divider" />
+
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onOpenDashboard();
+                  }}
+                >
+                  <span>My Boards</span>
+                </button>
+
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onExportPng();
+                  }}
+                >
+                  <ImageIcon size={15} className="text-blue-500" />
+                  <span>Export as PNG</span>
+                </button>
+
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onExportJson();
+                  }}
+                >
+                  <FileJson size={15} className="text-emerald-500" />
+                  <span>Export as JSON</span>
+                </button>
+
+                <div className="dropdown-divider" />
+
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onOpenShortcuts();
+                  }}
+                >
+                  <HelpCircle size={15} className="text-slate-500" />
+                  <span>Keyboard Shortcuts</span>
+                </button>
+
+                <button
+                  className="dropdown-item text-red-600"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onClearBoard();
+                  }}
+                >
+                  <Trash2 size={15} className="text-red-500" />
+                  <span>Clear Entire Canvas</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Ziro Brand Logo */}
+        <button className="ziro-logo-button" onClick={onOpenDashboard} title="Go to Ziro Dashboard">
+          <div className="ziro-logo-badge">
+            <span className="ziro-logo-letter">Z</span>
           </div>
-          <span className="brand-name">MiroBoard</span>
+          <span className="ziro-logo-text">ziro</span>
         </button>
 
-        <button
-          className="nav-dashboard-btn"
-          onClick={onOpenDashboard}
-          title="Open Workspace Dashboard"
-        >
-          <LayoutDashboard size={15} />
-          <span>My Boards</span>
-        </button>
+        <div className="ziro-v-sep" />
 
-        <div className="divider-v" />
-
-        <div className="title-section">
+        {/* Board Title & Star */}
+        <div className="ziro-title-container">
           {isEditingTitle ? (
             <input
               type="text"
-              className="board-title-input"
+              className="ziro-title-input"
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={handleTitleSubmit}
@@ -126,118 +206,168 @@ export const TopNav: React.FC<TopNavProps> = ({
               autoFocus
             />
           ) : (
-            <h1
-              className="board-title-text"
-              onClick={() => {
-                setTitleDraft(metadata.title);
-                setIsEditingTitle(true);
-              }}
-              title="Click to rename board"
-            >
-              {metadata.title}
-            </h1>
+            <div className="ziro-title-display" onClick={() => setIsEditingTitle(true)}>
+              <span className="ziro-title-text">{metadata.title}</span>
+              <ChevronDown size={14} className="text-slate-400" />
+            </div>
           )}
 
-          <div className="save-status-badge" title="Automatically saved to local database">
+          {/* Star Favorite Button */}
+          <button
+            className={`ziro-star-btn ${isStarred ? 'starred' : ''}`}
+            onClick={() => setIsStarred((prev) => !prev)}
+            title={isStarred ? 'Starred' : 'Star board'}
+          >
+            <Star size={15} fill={isStarred ? '#f59e0b' : 'none'} color={isStarred ? '#f59e0b' : '#94a3b8'} />
+          </button>
+
+          {/* Cloud Auto-save Status */}
+          <div className="ziro-save-pill" title="Changes saved automatically">
             {saveStatus === 'saved' ? (
               <>
-                <Check size={13} style={{ color: '#10b981' }} />
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Saved</span>
+                <Check size={12} className="text-emerald-500" strokeWidth={2.5} />
+                <span>Saved</span>
               </>
             ) : (
               <>
-                <span className="saving-spinner" />
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>Saving...</span>
+                <span className="ziro-saving-dot" />
+                <span>Saving...</span>
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* Middle / Right: Actions, Real-time Collab Avatars, & User Profile */}
-      <div className="top-nav-right">
-        {/* Active Collaborators Presence Stack */}
-        <div className="collaborators-avatar-stack" title={`${collaborators.length + 1} users active on this board`}>
-          {/* Current User */}
-          <div
-            className="user-avatar-pill current-user-avatar"
-            style={{ backgroundColor: currentUser.avatarColor }}
-            onClick={onOpenAuth}
-            title={`${currentUser.name} (You)`}
-          >
-            {currentUser.name.charAt(0)}
-          </div>
-
-          {/* Active Remote / Simulated Collaborators */}
-          {collaborators.map((collab) => (
-            <div
-              key={collab.id}
-              className="user-avatar-pill remote-collab-avatar"
-              style={{ backgroundColor: collab.user.avatarColor || '#3b82f6' }}
-              title={`${collab.user.name} (Online)`}
-            >
-              {collab.user.name.charAt(0)}
-            </div>
-          ))}
-        </div>
-
-        {/* Real-time Collaboration Toggle */}
-        <button
-          className={`collab-sim-btn ${isSimulating ? 'active' : ''}`}
-          onClick={onToggleSimulation}
-          title={isSimulating ? 'Stop live collaborator simulation' : 'Simulate live colleagues working on canvas'}
-        >
-          <Users size={14} />
-          <span>{isSimulating ? 'Live Collab ON' : 'Simulate Collab'}</span>
-          {isSimulating && <span className="live-pulsing-dot" />}
-        </button>
-
-        <div className="divider-v" />
-
-        {/* Undo & Redo */}
-        <div className="action-button-group">
+      {/* Right Section: Undo/Redo, Collab Avatars, Simulation Toggle, Present & Share */}
+      <div className="ziro-top-right">
+        {/* Undo / Redo */}
+        <div className="ziro-history-buttons">
           <button
-            className={`nav-icon-button ${!canUndo ? 'disabled' : ''}`}
+            className={`ziro-top-icon-btn ${!canUndo ? 'disabled' : ''}`}
             onClick={onUndo}
             disabled={!canUndo}
             title="Undo (Ctrl+Z)"
           >
-            <Undo2 size={18} />
+            <Undo2 size={16} strokeWidth={2.2} />
           </button>
           <button
-            className={`nav-icon-button ${!canRedo ? 'disabled' : ''}`}
+            className={`ziro-top-icon-btn ${!canRedo ? 'disabled' : ''}`}
             onClick={onRedo}
             disabled={!canRedo}
             title="Redo (Ctrl+Y)"
           >
-            <Redo2 size={18} />
+            <Redo2 size={16} strokeWidth={2.2} />
           </button>
         </div>
 
-        <div className="divider-v" />
+        <div className="ziro-v-sep" />
 
-        {/* Templates */}
-        <button className="nav-text-button" onClick={onOpenTemplates} title="Browse Starter Templates">
-          <LayoutTemplate size={16} style={{ color: '#6366f1' }} />
-          <span>Templates</span>
+        {/* Real-time Collaboration Mode Toggle */}
+        <button
+          className={`ziro-collab-toggle-btn ${isSimulating ? 'active' : ''}`}
+          onClick={onToggleSimulation}
+          title="Simulate live multi-user collaboration"
+        >
+          <Users size={14} strokeWidth={2} />
+          <span>{isSimulating ? 'Live Collab (Active)' : 'Collab Simulation'}</span>
+          {isSimulating && <span className="ziro-pulse-dot" />}
         </button>
 
-        {/* Export Dropdown */}
+        {/* Active Collaborators Avatar Stack */}
+        <div className="ziro-avatar-stack">
+          {/* User Profile */}
+          <div
+            className="ziro-avatar-circle current-user"
+            style={{ backgroundColor: currentUser.avatarColor }}
+            onClick={onOpenAuth}
+            title={`${currentUser.name} (You) - Click to manage account`}
+          >
+            {currentUser.name.charAt(0)}
+          </div>
+
+          {/* Remote Collaborators */}
+          {collaborators.map((c) => (
+            <div
+              key={c.id}
+              className="ziro-avatar-circle"
+              style={{ backgroundColor: c.user.avatarColor }}
+              title={`${c.user.name} (Online)`}
+            >
+              {c.user.name.charAt(0)}
+            </div>
+          ))}
+        </div>
+
+        {/* Reaction quick popup */}
         <div className="relative">
           <button
-            className="nav-text-button export-btn"
-            onClick={() => setShowExportMenu((prev) => !prev)}
-            title="Export or Import Board"
+            className="ziro-top-icon-btn"
+            onClick={() => setShowReactions((prev) => !prev)}
+            title="Reactions"
           >
-            <Download size={16} />
-            <span>Export</span>
-            <ChevronDown size={14} />
+            <Smile size={16} strokeWidth={2} />
+          </button>
+
+          {showReactions && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowReactions(false)} />
+              <div className="ziro-reactions-popover">
+                {['👍', '❤️', '🔥', '🎉', '💡', '🚀', '👏'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    className="ziro-emoji-btn"
+                    onClick={() => setShowReactions(false)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Timer Widget */}
+        <button className="ziro-top-icon-btn" title="Timer widget">
+          <Timer size={16} strokeWidth={2} />
+        </button>
+
+        {/* Presentation Mode Button */}
+        <button
+          className="ziro-present-btn"
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+              document.exitFullscreen().catch(() => {});
+            }
+          }}
+          title="Presentation Mode (Fullscreen)"
+        >
+          <Play size={14} fill="currentColor" />
+          <span>Present</span>
+        </button>
+
+        {/* Prominent Miro Blue Share Button */}
+        <button className="ziro-share-btn" onClick={handleShareClick} title="Copy Board Link">
+          <Share2 size={14} strokeWidth={2.2} />
+          <span>Share</span>
+        </button>
+
+        {/* Export & Download Menu */}
+        <div className="relative">
+          <button
+            className="ziro-export-btn"
+            onClick={() => setShowExportMenu((prev) => !prev)}
+            title="Export Board"
+          >
+            <Download size={15} strokeWidth={2.2} />
+            <ChevronDown size={12} />
           </button>
 
           {showExportMenu && (
             <>
               <div className="dropdown-backdrop" onClick={() => setShowExportMenu(false)} />
-              <div className="export-dropdown-menu">
+              <div className="ziro-export-popover">
                 <button
                   className="dropdown-item"
                   onClick={() => {
@@ -245,10 +375,10 @@ export const TopNav: React.FC<TopNavProps> = ({
                     onExportPng();
                   }}
                 >
-                  <ImageIcon size={16} style={{ color: '#3b82f6' }} />
-                  <div className="dropdown-item-text">
-                    <span style={{ fontWeight: 600, fontSize: '13px' }}>Export as PNG</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>High resolution image</span>
+                  <ImageIcon size={16} className="text-blue-500" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs">Save as Image (PNG)</span>
+                    <span className="text-[10px] text-slate-400">High-res vector render</span>
                   </div>
                 </button>
                 <button
@@ -258,10 +388,10 @@ export const TopNav: React.FC<TopNavProps> = ({
                     onExportJson();
                   }}
                 >
-                  <FileJson size={16} style={{ color: '#10b981' }} />
-                  <div className="dropdown-item-text">
-                    <span style={{ fontWeight: 600, fontSize: '13px' }}>Export as JSON</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Reusable board data</span>
+                  <FileJson size={16} className="text-emerald-500" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs">Save as JSON</span>
+                    <span className="text-[10px] text-slate-400">Backup board file</span>
                   </div>
                 </button>
                 <div className="dropdown-divider" />
@@ -269,10 +399,10 @@ export const TopNav: React.FC<TopNavProps> = ({
                   className="dropdown-item"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload size={16} style={{ color: '#f59e0b' }} />
-                  <div className="dropdown-item-text">
-                    <span style={{ fontWeight: 600, fontSize: '13px' }}>Import JSON</span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>Load board from file</span>
+                  <Upload size={16} className="text-amber-500" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs">Open JSON File</span>
+                    <span className="text-[10px] text-slate-400">Restore from disk</span>
                   </div>
                 </button>
                 <input
@@ -280,32 +410,24 @@ export const TopNav: React.FC<TopNavProps> = ({
                   type="file"
                   accept=".json"
                   style={{ display: 'none' }}
-                  onChange={handleFileChange}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onImportJson(file);
+                    setShowExportMenu(false);
+                  }}
                 />
               </div>
             </>
           )}
         </div>
 
-        <div className="divider-v" />
-
-        {/* Clear Board */}
-        <button
-          className="nav-icon-button clear-btn"
-          onClick={onClearBoard}
-          title="Clear Board Canvas"
-        >
-          <Trash2 size={17} />
-        </button>
-
-        {/* Shortcuts Help */}
-        <button
-          className="nav-icon-button help-btn"
-          onClick={onOpenShortcuts}
-          title="Keyboard Shortcuts (?)"
-        >
-          <HelpCircle size={18} />
-        </button>
+        {/* Share Link Toast */}
+        {showShareToast && (
+          <div className="ziro-share-toast">
+            <Check size={14} className="text-emerald-400" />
+            <span>Board link copied to clipboard!</span>
+          </div>
+        )}
       </div>
     </header>
   );

@@ -10,8 +10,11 @@ import {
   Palette,
   Minus,
   Plus,
+  Lock,
+  Unlock,
 } from 'lucide-react';
-import type { CanvasElement, StickyColor, StickyElement, ShapeElementData, TextElementData } from '../../types/whiteboard';
+import type { CanvasElement, StickyElement, ShapeElementData, TextElementData } from '../../types/whiteboard';
+import { MIRO_STICKY_SWATCHES } from './LeftToolbar';
 
 interface ContextPropertyBarProps {
   selectedElements: CanvasElement[];
@@ -22,26 +25,17 @@ interface ContextPropertyBarProps {
   onSendBackward: () => void;
 }
 
-const COLOR_SWATCHES = [
-  { label: 'Blue', value: '#3b82f6' },
+const SHAPE_PALETTES = [
+  { label: 'White', value: '#ffffff' },
+  { label: 'Pastel Blue', value: '#eff6ff' },
+  { label: 'Pastel Green', value: '#ecfdf5' },
+  { label: 'Pastel Yellow', value: '#fffbeb' },
+  { label: 'Pastel Rose', value: '#fff1f2' },
+  { label: 'Pastel Purple', value: '#faf5ff' },
+  { label: 'Deep Blue', value: '#3b82f6' },
   { label: 'Emerald', value: '#10b981' },
   { label: 'Amber', value: '#f59e0b' },
-  { label: 'Rose', value: '#f43f5e' },
-  { label: 'Purple', value: '#8b5cf6' },
-  { label: 'Slate', value: '#1e293b' },
-  { label: 'White', value: '#ffffff' },
-  { label: 'Soft Blue', value: '#eff6ff' },
-  { label: 'Soft Green', value: '#ecfdf5' },
-  { label: 'Soft Amber', value: '#fffbeb' },
-];
-
-const STICKY_COLORS: { color: StickyColor; hex: string }[] = [
-  { color: 'yellow', hex: '#fef08a' },
-  { color: 'coral', hex: '#fecdd3' },
-  { color: 'blue', hex: '#bae6fd' },
-  { color: 'green', hex: '#bbf7d0' },
-  { color: 'purple', hex: '#e9d5ff' },
-  { color: 'amber', hex: '#fed7aa' },
+  { label: 'Dark Slate', value: '#1e293b' },
 ];
 
 export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
@@ -58,21 +52,22 @@ export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
 
   const first = selectedElements[0];
   const isSticky = first.type === 'sticky';
-  const isShape = first.type === 'rectangle' || first.type === 'circle';
+  const isShape = first.type === 'rectangle' || first.type === 'circle' || first.type === 'diamond';
   const isArrow = first.type === 'arrow';
   const isText = first.type === 'text';
   const isDraw = first.type === 'draw';
+  const isLocked = first.locked || false;
 
   return (
-    <div className="context-property-dock">
-      {/* 1. Sticky Note Color Theme Swatches */}
+    <div className="ziro-context-dock">
+      {/* 1. Sticky Note Palette */}
       {isSticky && (
         <div className="prop-group">
-          {STICKY_COLORS.map(({ color, hex }) => (
+          {MIRO_STICKY_SWATCHES.map(({ color, bg }) => (
             <button
               key={color}
               className={`color-dot-btn ${(first as StickyElement).colorTheme === color ? 'active' : ''}`}
-              style={{ backgroundColor: hex }}
+              style={{ backgroundColor: bg }}
               onClick={() => onUpdateElements({ colorTheme: color } as Partial<StickyElement>)}
               title={color}
             />
@@ -80,7 +75,7 @@ export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
         </div>
       )}
 
-      {/* 2. Shape Fill Color Picker */}
+      {/* 2. Shape Fill Color */}
       {isShape && (
         <div className="prop-group relative">
           <button
@@ -92,14 +87,14 @@ export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
               className="color-preview-box"
               style={{ backgroundColor: (first as ShapeElementData).fill || '#ffffff' }}
             />
-            <span style={{ fontSize: '12px' }}>Fill</span>
+            <span>Fill</span>
           </button>
 
           {showColorPicker === 'fill' && (
             <div className="palette-popover">
-              <div className="popover-title">Fill Color</div>
+              <div className="popover-title">FILL COLOR</div>
               <div className="popover-grid">
-                {COLOR_SWATCHES.map((c) => (
+                {SHAPE_PALETTES.map((c) => (
                   <button
                     key={c.value}
                     className="swatch-btn"
@@ -117,26 +112,26 @@ export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
         </div>
       )}
 
-      {/* 3. Stroke Color Picker (for Shape, Arrow, Draw) */}
+      {/* 3. Stroke Color Picker */}
       {(isShape || isArrow || isDraw) && (
         <div className="prop-group relative">
           <button
             className="prop-btn"
             onClick={() => setShowColorPicker((prev) => (prev === 'stroke' ? null : 'stroke'))}
-            title="Border / Stroke Color"
+            title="Stroke Color"
           >
-            <Palette size={16} />
+            <Palette size={15} />
             <div
               className="color-preview-box"
-              style={{ backgroundColor: (first as ShapeElementData).stroke || '#3b82f6' }}
+              style={{ backgroundColor: (first as ShapeElementData).stroke || '#4262ff' }}
             />
           </button>
 
           {showColorPicker === 'stroke' && (
             <div className="palette-popover">
-              <div className="popover-title">Stroke Color</div>
+              <div className="popover-title">STROKE COLOR</div>
               <div className="popover-grid">
-                {COLOR_SWATCHES.map((c) => (
+                {SHAPE_PALETTES.map((c) => (
                   <button
                     key={c.value}
                     className="swatch-btn"
@@ -154,7 +149,7 @@ export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
         </div>
       )}
 
-      {/* 4. Stroke Width Selector */}
+      {/* 4. Stroke Width */}
       {(isShape || isArrow || isDraw) && (
         <div className="prop-group">
           {[1, 2, 4, 6].map((w) => {
@@ -173,101 +168,89 @@ export const ContextPropertyBar: React.FC<ContextPropertyBarProps> = ({
         </div>
       )}
 
-      {/* 5. Stroke Style (Solid / Dashed) */}
-      {(isShape || isArrow) && (
-        <div className="prop-group">
-          <button
-            className={`prop-btn ${((first as ShapeElementData).strokeStyle || 'solid') === 'solid' ? 'active' : ''}`}
-            onClick={() => onUpdateElements({ strokeStyle: 'solid' } as Partial<ShapeElementData>)}
-            title="Solid line"
-          >
-            <div style={{ width: '16px', height: '2px', backgroundColor: 'currentColor' }} />
-          </button>
-          <button
-            className={`prop-btn ${(first as ShapeElementData).strokeStyle === 'dashed' ? 'active' : ''}`}
-            onClick={() => onUpdateElements({ strokeStyle: 'dashed' } as Partial<ShapeElementData>)}
-            title="Dashed line"
-          >
-            <div style={{ width: '16px', height: '2px', borderTop: '2px dashed currentColor' }} />
-          </button>
-        </div>
-      )}
-
-      {/* 6. Typography Controls (Font Size & Align) */}
+      {/* 5. Typography Controls */}
       {(isSticky || isShape || isText) && (
         <div className="prop-group">
           <button
             className="prop-btn"
             onClick={() => {
-              const current = ((first as TextElementData).fontSize || 16);
+              const current = (first as TextElementData).fontSize || 14;
               onUpdateElements({ fontSize: Math.max(12, current - 2) } as Partial<TextElementData>);
             }}
-            title="Decrease font size"
+            title="Smaller font"
           >
-            <Minus size={14} />
+            <Minus size={13} />
           </button>
-          <span style={{ fontSize: '12px', fontWeight: 600, padding: '0 4px' }}>
-            {((first as TextElementData).fontSize || 16)}px
+          <span style={{ fontSize: '11px', fontWeight: 600, minWidth: '22px', textAlign: 'center' }}>
+            {(first as TextElementData).fontSize || 14}
           </span>
           <button
             className="prop-btn"
             onClick={() => {
-              const current = ((first as TextElementData).fontSize || 16);
+              const current = (first as TextElementData).fontSize || 14;
               onUpdateElements({ fontSize: Math.min(64, current + 2) } as Partial<TextElementData>);
             }}
-            title="Increase font size"
+            title="Larger font"
           >
-            <Plus size={14} />
+            <Plus size={13} />
           </button>
 
           <div className="prop-divider" />
 
-          {/* Alignment */}
           <button
             className={`prop-btn ${(first as TextElementData).textAlign === 'left' ? 'active' : ''}`}
             onClick={() => onUpdateElements({ textAlign: 'left' } as Partial<TextElementData>)}
             title="Align Left"
           >
-            <AlignLeft size={15} />
+            <AlignLeft size={14} />
           </button>
           <button
             className={`prop-btn ${((first as TextElementData).textAlign || 'center') === 'center' ? 'active' : ''}`}
             onClick={() => onUpdateElements({ textAlign: 'center' } as Partial<TextElementData>)}
             title="Align Center"
           >
-            <AlignCenter size={15} />
+            <AlignCenter size={14} />
           </button>
           <button
             className={`prop-btn ${(first as TextElementData).textAlign === 'right' ? 'active' : ''}`}
             onClick={() => onUpdateElements({ textAlign: 'right' } as Partial<TextElementData>)}
             title="Align Right"
           >
-            <AlignRight size={15} />
+            <AlignRight size={14} />
           </button>
         </div>
       )}
 
       <div className="prop-divider" />
 
-      {/* 7. Layer Ordering */}
+      {/* 6. Lock Toggle */}
+      <button
+        className={`prop-btn ${isLocked ? 'active' : ''}`}
+        onClick={() => onUpdateElements({ locked: !isLocked })}
+        title={isLocked ? 'Unlock element' : 'Lock element'}
+      >
+        {isLocked ? <Lock size={14} className="text-amber-500" /> : <Unlock size={14} />}
+      </button>
+
+      {/* 7. Layer Order */}
       <div className="prop-group">
-        <button className="prop-btn" onClick={onBringForward} title="Bring Forward">
-          <BringToFront size={16} />
+        <button className="prop-btn" onClick={onBringForward} title="Bring to front">
+          <BringToFront size={14} />
         </button>
-        <button className="prop-btn" onClick={onSendBackward} title="Send Backward">
-          <SendToBack size={16} />
+        <button className="prop-btn" onClick={onSendBackward} title="Send to back">
+          <SendToBack size={14} />
         </button>
       </div>
 
       <div className="prop-divider" />
 
-      {/* 8. Actions: Duplicate & Delete */}
+      {/* 8. Duplicate & Delete */}
       <div className="prop-group">
         <button className="prop-btn" onClick={onDuplicateSelected} title="Duplicate (Ctrl+D)">
-          <Copy size={16} />
+          <Copy size={14} />
         </button>
         <button className="prop-btn delete-btn" onClick={onDeleteSelected} title="Delete (Del)">
-          <Trash2 size={16} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>

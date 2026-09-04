@@ -408,12 +408,13 @@ export const App: React.FC = () => {
         saveStatus={saveStatus}
       />
 
-      {/* Left Tool Dock */}
+      {/* Left Miro Tool Dock */}
       <LeftToolbar
         activeTool={activeTool}
         setActiveTool={setActiveTool}
         activeStickyColor={activeStickyColor}
         setActiveStickyColor={setActiveStickyColor}
+        onOpenTemplates={() => setIsTemplatesOpen(true)}
       />
 
       {/* Contextual Properties Floating Dock */}

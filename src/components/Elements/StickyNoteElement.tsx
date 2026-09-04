@@ -10,49 +10,16 @@ interface StickyNoteElementProps {
   onFinishEditing?: () => void;
 }
 
-const THEME_COLORS = {
-  yellow: {
-    bg: '#fef9c3',
-    border: '#fde047',
-    shadow: 'rgba(234, 179, 8, 0.25)',
-    text: '#713f12',
-    accent: '#facc15',
-  },
-  coral: {
-    bg: '#ffe4e6',
-    border: '#fecdd3',
-    shadow: 'rgba(244, 63, 94, 0.22)',
-    text: '#881337',
-    accent: '#fb7185',
-  },
-  blue: {
-    bg: '#e0f2fe',
-    border: '#bae6fd',
-    shadow: 'rgba(14, 165, 233, 0.22)',
-    text: '#0c4a6e',
-    accent: '#38bdf8',
-  },
-  green: {
-    bg: '#dcfce7',
-    border: '#bbf7d0',
-    shadow: 'rgba(34, 197, 94, 0.22)',
-    text: '#14532d',
-    accent: '#4ade80',
-  },
-  purple: {
-    bg: '#f3e8ff',
-    border: '#e9d5ff',
-    shadow: 'rgba(168, 85, 247, 0.22)',
-    text: '#581c87',
-    accent: '#c084fc',
-  },
-  amber: {
-    bg: '#ffedd5',
-    border: '#fed7aa',
-    shadow: 'rgba(249, 115, 22, 0.22)',
-    text: '#7c2d12',
-    accent: '#fb923c',
-  },
+// Authentic Miro Sticky Note Color Palette
+export const MIRO_STICKY_THEMES = {
+  yellow: { bg: '#fff9b1', border: '#fef08a', text: '#3c3500', shadow: 'rgba(234, 179, 8, 0.15)' },
+  blue: { bg: '#d0e7ff', border: '#bae6fd', text: '#002f6c', shadow: 'rgba(14, 165, 233, 0.15)' },
+  green: { bg: '#d5f5e3', border: '#bbf7d0', text: '#0e4e26', shadow: 'rgba(34, 197, 94, 0.15)' },
+  pink: { bg: '#f5d1c3', border: '#fecdd3', text: '#5c1b05', shadow: 'rgba(244, 63, 94, 0.15)' },
+  orange: { bg: '#ffe0b2', border: '#fed7aa', text: '#632e00', shadow: 'rgba(249, 115, 22, 0.15)' },
+  purple: { bg: '#e6d9ff', border: '#e9d5ff', text: '#38006b', shadow: 'rgba(168, 85, 247, 0.15)' },
+  cyan: { bg: '#cbf0f8', border: '#a5f3fc', text: '#004953', shadow: 'rgba(6, 182, 212, 0.15)' },
+  gray: { bg: '#f1f5f9', border: '#e2e8f0', text: '#334155', shadow: 'rgba(100, 116, 139, 0.12)' },
 };
 
 export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
@@ -67,7 +34,7 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   const [draftText, setDraftText] = useState(element.text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const theme = THEME_COLORS[element.colorTheme] || THEME_COLORS.yellow;
+  const theme = MIRO_STICKY_THEMES[element.colorTheme] || MIRO_STICKY_THEMES.yellow;
 
   useEffect(() => {
     if (isEditingDirectly) {
@@ -104,41 +71,27 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
 
   return (
     <div
-      className="sticky-note-container"
+      className="miro-sticky-note"
       style={{
         width: `${element.width}px`,
         height: `${element.height}px`,
         backgroundColor: theme.bg,
         boxShadow: isSelected
-          ? `0 12px 28px -4px ${theme.shadow}, 0 4px 12px rgba(0,0,0,0.08)`
-          : `0 6px 16px -2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)`,
-        border: `1px solid ${theme.border}`,
-        borderRadius: '8px',
+          ? `0 14px 28px -4px ${theme.shadow}, 0 4px 10px rgba(0,0,0,0.06), 0 0 0 1.5px #4262ff`
+          : `0 8px 18px -2px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.03)`,
+        borderRadius: '3px',
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         userSelect: isEditing ? 'text' : 'none',
         cursor: isEditing ? 'text' : 'default',
-        transition: 'box-shadow 0.15s ease',
         overflow: 'hidden',
+        boxSizing: 'border-box',
+        transition: 'box-shadow 0.15s ease',
       }}
       onDoubleClick={handleDoubleClick}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          backgroundColor: theme.accent,
-          opacity: 0.6,
-          borderTopLeftRadius: '7px',
-          borderTopRightRadius: '7px',
-        }}
-      />
-
       {isEditing ? (
         <textarea
           ref={textareaRef}
@@ -157,8 +110,9 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
             fontSize: `${element.fontSize || 14}px`,
             color: element.fontColor || theme.text,
             textAlign: element.textAlign || 'left',
-            lineHeight: 1.4,
+            lineHeight: 1.45,
             padding: 0,
+            fontWeight: 500,
           }}
           placeholder="Type something..."
         />
@@ -171,23 +125,25 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
             fontSize: `${element.fontSize || 14}px`,
             color: element.fontColor || theme.text,
             textAlign: element.textAlign || 'left',
-            lineHeight: 1.4,
+            lineHeight: 1.45,
+            fontWeight: 500,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
             overflow: 'hidden',
           }}
         >
-          {element.text || <span style={{ opacity: 0.45, fontStyle: 'italic' }}>Empty sticky note</span>}
+          {element.text || <span style={{ opacity: 0.35, fontStyle: 'italic' }}>Empty sticky note</span>}
         </div>
       )}
 
+      {/* Miro signature folded corner bottom right */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           right: 0,
-          width: '18px',
-          height: '18px',
+          width: '16px',
+          height: '16px',
           background: `linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.12) 100%)`,
           pointerEvents: 'none',
         }}

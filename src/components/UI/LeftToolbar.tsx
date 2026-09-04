@@ -5,11 +5,14 @@ import {
   StickyNote,
   Square,
   Circle,
+  Diamond,
   MoveRight,
   PenTool,
   Type,
   Eraser,
+  LayoutGrid,
   Check,
+  Frame,
 } from 'lucide-react';
 import type { ToolType, StickyColor } from '../../types/whiteboard';
 
@@ -18,24 +21,18 @@ interface LeftToolbarProps {
   setActiveTool: (tool: ToolType) => void;
   activeStickyColor: StickyColor;
   setActiveStickyColor: (color: StickyColor) => void;
+  onOpenTemplates: () => void;
 }
 
-interface ToolDefinition {
-  id: ToolType;
-  label: string;
-  icon: React.ReactNode;
-  shortcut: string;
-  group: 'navigate' | 'shapes' | 'draw' | 'manage';
-  hasSubmenu?: boolean;
-}
-
-const STICKY_PALETTE: { color: StickyColor; bg: string; border: string; label: string }[] = [
-  { color: 'yellow', bg: '#fef08a', border: '#fde047', label: 'Yellow' },
-  { color: 'coral', bg: '#fecdd3', border: '#fda4af', label: 'Coral / Pink' },
-  { color: 'blue', bg: '#bae6fd', border: '#7dd3fc', label: 'Sky Blue' },
-  { color: 'green', bg: '#bbf7d0', border: '#86efac', label: 'Mint Green' },
-  { color: 'purple', bg: '#e9d5ff', border: '#d8b4fe', label: 'Lavender' },
-  { color: 'amber', bg: '#fed7aa', border: '#fdba74', label: 'Warm Amber' },
+export const MIRO_STICKY_SWATCHES: { color: StickyColor; bg: string; border: string; label: string }[] = [
+  { color: 'yellow', bg: '#fff9b1', border: '#fef08a', label: 'Sunshine Yellow' },
+  { color: 'blue', bg: '#d0e7ff', border: '#bae6fd', label: 'Sky Blue' },
+  { color: 'green', bg: '#d5f5e3', border: '#bbf7d0', label: 'Mint Green' },
+  { color: 'pink', bg: '#f5d1c3', border: '#fecdd3', label: 'Soft Coral / Pink' },
+  { color: 'orange', bg: '#ffe0b2', border: '#fed7aa', label: 'Tangerine Orange' },
+  { color: 'purple', bg: '#e6d9ff', border: '#e9d5ff', label: 'Lavender Violet' },
+  { color: 'cyan', bg: '#cbf0f8', border: '#a5f3fc', label: 'Aqua Cyan' },
+  { color: 'gray', bg: '#f1f5f9', border: '#e2e8f0', label: 'Cool Slate' },
 ];
 
 export const LeftToolbar: React.FC<LeftToolbarProps> = ({
@@ -43,124 +40,364 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
   setActiveTool,
   activeStickyColor,
   setActiveStickyColor,
+  onOpenTemplates,
 }) => {
   const [showStickyMenu, setShowStickyMenu] = useState(false);
-  const [hoveredTool, setHoveredTool] = useState<ToolType | null>(null);
+  const [showShapesMenu, setShowShapesMenu] = useState(false);
+  const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
-  const tools: ToolDefinition[] = [
-    { id: 'select', label: 'Select tool', icon: <MousePointer size={20} strokeWidth={2.2} />, shortcut: 'V', group: 'navigate' },
-    { id: 'pan', label: 'Hand / Pan canvas', icon: <Hand size={20} strokeWidth={2.2} />, shortcut: 'H', group: 'navigate' },
-    {
-      id: 'sticky',
-      label: 'Sticky Note',
-      icon: <StickyNote size={20} strokeWidth={2.2} />,
-      shortcut: 'S',
-      group: 'shapes',
-      hasSubmenu: true,
-    },
-    { id: 'rectangle', label: 'Rectangle Shape', icon: <Square size={20} strokeWidth={2.2} />, shortcut: 'R', group: 'shapes' },
-    { id: 'circle', label: 'Circle Shape', icon: <Circle size={20} strokeWidth={2.2} />, shortcut: 'O', group: 'shapes' },
-    { id: 'arrow', label: 'Connection Arrow', icon: <MoveRight size={20} strokeWidth={2.2} />, shortcut: 'A', group: 'shapes' },
-    { id: 'draw', label: 'Freehand Pen', icon: <PenTool size={20} strokeWidth={2.2} />, shortcut: 'P', group: 'draw' },
-    { id: 'text', label: 'Text Box', icon: <Type size={20} strokeWidth={2.2} />, shortcut: 'T', group: 'draw' },
-    { id: 'eraser', label: 'Eraser', icon: <Eraser size={20} strokeWidth={2.2} />, shortcut: 'E', group: 'manage' },
-  ];
-
-  const currentStickyTheme = STICKY_PALETTE.find((p) => p.color === activeStickyColor) || STICKY_PALETTE[0];
+  const currentSticky = MIRO_STICKY_SWATCHES.find((s) => s.color === activeStickyColor) || MIRO_STICKY_SWATCHES[0];
 
   return (
-    <aside className="left-toolbar-wrapper" aria-label="Whiteboard toolbar">
-      <nav className="left-toolbar-dock">
-        {tools.map((t, index) => {
-          const isActive = activeTool === t.id;
-          const isNextDifferentGroup =
-            index < tools.length - 1 && tools[index + 1].group !== t.group;
+    <aside className="ziro-toolbar-container" aria-label="Ziro Whiteboard Tools">
+      <nav className="ziro-toolbar-dock">
+        {/* 1. Select Tool (V) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('select')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('select');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Select tool (V)"
+          >
+            {activeTool === 'select' && <div className="ziro-active-pill" />}
+            <MousePointer size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'select' && (
+            <div className="ziro-tooltip">
+              <span>Select</span>
+              <kbd>V</kbd>
+            </div>
+          )}
+        </div>
 
-          return (
-            <React.Fragment key={t.id}>
-              <div
-                className="tool-item-container"
-                onMouseEnter={() => setHoveredTool(t.id)}
-                onMouseLeave={() => setHoveredTool(null)}
-              >
-                <button
-                  className={`toolbar-btn ${isActive ? 'active' : ''}`}
-                  onClick={() => {
-                    setActiveTool(t.id);
-                    if (t.id === 'sticky') {
-                      setShowStickyMenu((prev) => !prev);
-                    } else {
-                      setShowStickyMenu(false);
-                    }
-                  }}
-                  aria-label={t.label}
-                  aria-pressed={isActive}
-                >
-                  {/* Left active indicator pill */}
-                  {isActive && <div className="active-pill-indicator" />}
+        {/* 2. Pan / Hand Tool (H) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('pan')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'pan' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('pan');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Hand tool (H)"
+          >
+            {activeTool === 'pan' && <div className="ziro-active-pill" />}
+            <Hand size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'pan' && (
+            <div className="ziro-tooltip">
+              <span>Hand (Pan)</span>
+              <kbd>H</kbd>
+            </div>
+          )}
+        </div>
 
-                  <span className="tool-icon-wrapper">{t.icon}</span>
+        {/* 3. Templates (T) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('template')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className="ziro-tool-btn"
+            onClick={() => {
+              onOpenTemplates();
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Templates"
+          >
+            <LayoutGrid size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'template' && (
+            <div className="ziro-tooltip">
+              <span>Templates</span>
+            </div>
+          )}
+        </div>
 
-                  {/* For sticky notes: live selected color pip */}
-                  {t.id === 'sticky' && (
-                    <span
-                      className="sticky-color-pip"
-                      style={{ backgroundColor: currentStickyTheme.bg }}
-                    />
-                  )}
-                </button>
+        <div className="ziro-group-divider" />
 
-                {/* Custom Interactive Tooltip */}
-                {hoveredTool === t.id && !showStickyMenu && (
-                  <div className="tool-custom-tooltip" role="tooltip">
-                    <span className="tooltip-title">{t.label}</span>
-                    <kbd className="tooltip-kbd">{t.shortcut}</kbd>
-                  </div>
-                )}
+        {/* 4. Text Tool (T) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('text')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'text' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('text');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Text box (T)"
+          >
+            {activeTool === 'text' && <div className="ziro-active-pill" />}
+            <Type size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'text' && (
+            <div className="ziro-tooltip">
+              <span>Text</span>
+              <kbd>T</kbd>
+            </div>
+          )}
+        </div>
 
-                {/* Sticky Note Color Quick Palette Flyout */}
-                {t.id === 'sticky' && showStickyMenu && (
-                  <>
-                    <div className="flyout-backdrop" onClick={() => setShowStickyMenu(false)} />
-                    <div className="sticky-color-flyout">
-                      <div className="flyout-header">
-                        <span className="flyout-title">Sticky Note Color</span>
-                      </div>
-                      <div className="sticky-color-grid">
-                        {STICKY_PALETTE.map((item) => {
-                          const isColorActive = activeStickyColor === item.color;
-                          return (
-                            <button
-                              key={item.color}
-                              className={`sticky-color-swatch ${isColorActive ? 'active' : ''}`}
-                              style={{
-                                backgroundColor: item.bg,
-                                borderColor: item.border,
-                              }}
-                              onClick={() => {
-                                setActiveStickyColor(item.color);
-                                setActiveTool('sticky');
-                                setShowStickyMenu(false);
-                              }}
-                              title={item.label}
-                            >
-                              {isColorActive && (
-                                <Check size={14} className="swatch-check-icon" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </>
-                )}
+        {/* 5. Sticky Note (N / S) */}
+        <div
+          className="ziro-tool-item relative"
+          onMouseEnter={() => setHoveredTool('sticky')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'sticky' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('sticky');
+              setShowStickyMenu((prev) => !prev);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Sticky note (S / N)"
+          >
+            {activeTool === 'sticky' && <div className="ziro-active-pill" />}
+            <StickyNote size={20} strokeWidth={2.2} />
+            <span
+              className="ziro-sticky-pip"
+              style={{ backgroundColor: currentSticky.bg, borderColor: currentSticky.border }}
+            />
+          </button>
+
+          {hoveredTool === 'sticky' && !showStickyMenu && (
+            <div className="ziro-tooltip">
+              <span>Sticky Note</span>
+              <kbd>N / S</kbd>
+            </div>
+          )}
+
+          {/* Miro Sticky Note Color Flyout */}
+          {showStickyMenu && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowStickyMenu(false)} />
+              <div className="ziro-flyout-card">
+                <div className="ziro-flyout-title">STICKY NOTE COLOR</div>
+                <div className="ziro-swatches-grid">
+                  {MIRO_STICKY_SWATCHES.map((item) => (
+                    <button
+                      key={item.color}
+                      className={`ziro-swatch-box ${activeStickyColor === item.color ? 'active' : ''}`}
+                      style={{ backgroundColor: item.bg, borderColor: item.border }}
+                      onClick={() => {
+                        setActiveStickyColor(item.color);
+                        setActiveTool('sticky');
+                        setShowStickyMenu(false);
+                      }}
+                      title={item.label}
+                    >
+                      {activeStickyColor === item.color && <Check size={14} className="text-slate-800" strokeWidth={2.5} />}
+                    </button>
+                  ))}
+                </div>
               </div>
+            </>
+          )}
+        </div>
 
-              {/* Group Divider */}
-              {isNextDifferentGroup && <div className="toolbar-group-divider" />}
-            </React.Fragment>
-          );
-        })}
+        {/* 6. Shape Tool (Rectangle / Circle / Diamond) */}
+        <div
+          className="ziro-tool-item relative"
+          onMouseEnter={() => setHoveredTool('shapes')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'diamond' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('rectangle');
+              setShowShapesMenu((prev) => !prev);
+              setShowStickyMenu(false);
+            }}
+            aria-label="Shapes (R / O)"
+          >
+            {(activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'diamond') && (
+              <div className="ziro-active-pill" />
+            )}
+            {activeTool === 'circle' ? (
+              <Circle size={20} strokeWidth={2.2} />
+            ) : activeTool === 'diamond' ? (
+              <Diamond size={20} strokeWidth={2.2} />
+            ) : (
+              <Square size={20} strokeWidth={2.2} />
+            )}
+          </button>
+
+          {hoveredTool === 'shapes' && !showShapesMenu && (
+            <div className="ziro-tooltip">
+              <span>Shapes</span>
+              <kbd>R</kbd>
+            </div>
+          )}
+
+          {/* Shapes Picker Flyout */}
+          {showShapesMenu && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowShapesMenu(false)} />
+              <div className="ziro-flyout-card">
+                <div className="ziro-flyout-title">SHAPES</div>
+                <div className="ziro-shapes-row">
+                  <button
+                    className={`ziro-shape-choice-btn ${activeTool === 'rectangle' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('rectangle');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Rectangle"
+                  >
+                    <Square size={18} strokeWidth={2} />
+                    <span>Rectangle</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-choice-btn ${activeTool === 'circle' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('circle');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Circle"
+                  >
+                    <Circle size={18} strokeWidth={2} />
+                    <span>Circle</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-choice-btn ${activeTool === 'diamond' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('diamond');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Diamond"
+                  >
+                    <Diamond size={18} strokeWidth={2} />
+                    <span>Diamond</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 7. Connection Line / Arrow (A) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('arrow')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'arrow' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('arrow');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Connection Arrow (A / L)"
+          >
+            {activeTool === 'arrow' && <div className="ziro-active-pill" />}
+            <MoveRight size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'arrow' && (
+            <div className="ziro-tooltip">
+              <span>Connection Arrow</span>
+              <kbd>A / L</kbd>
+            </div>
+          )}
+        </div>
+
+        {/* 8. Freehand Pen (P) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('draw')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'draw' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('draw');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Pen / Draw (P)"
+          >
+            {activeTool === 'draw' && <div className="ziro-active-pill" />}
+            <PenTool size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'draw' && (
+            <div className="ziro-tooltip">
+              <span>Pen</span>
+              <kbd>P</kbd>
+            </div>
+          )}
+        </div>
+
+        {/* 9. Frame Container Tool (F) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('frame')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'frame' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('frame');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Frame container (F)"
+          >
+            {activeTool === 'frame' && <div className="ziro-active-pill" />}
+            <Frame size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'frame' && (
+            <div className="ziro-tooltip">
+              <span>Frame</span>
+              <kbd>F</kbd>
+            </div>
+          )}
+        </div>
+
+        <div className="ziro-group-divider" />
+
+        {/* 10. Eraser Tool (E) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('eraser')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('eraser');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+            }}
+            aria-label="Eraser (E)"
+          >
+            {activeTool === 'eraser' && <div className="ziro-active-pill" />}
+            <Eraser size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'eraser' && (
+            <div className="ziro-tooltip">
+              <span>Eraser</span>
+              <kbd>E</kbd>
+            </div>
+          )}
+        </div>
       </nav>
     </aside>
   );

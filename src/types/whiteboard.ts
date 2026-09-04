@@ -1,23 +1,36 @@
 export type ToolType =
   | 'select'
   | 'pan'
+  | 'template'
+  | 'text'
   | 'sticky'
   | 'rectangle'
   | 'circle'
+  | 'diamond'
   | 'arrow'
   | 'draw'
-  | 'text'
+  | 'frame'
   | 'eraser';
 
 export type ElementType =
   | 'sticky'
   | 'rectangle'
   | 'circle'
+  | 'diamond'
   | 'arrow'
   | 'draw'
-  | 'text';
+  | 'text'
+  | 'frame';
 
-export type StickyColor = 'yellow' | 'coral' | 'blue' | 'green' | 'purple' | 'amber';
+export type StickyColor =
+  | 'yellow'
+  | 'blue'
+  | 'green'
+  | 'pink'
+  | 'orange'
+  | 'purple'
+  | 'cyan'
+  | 'gray';
 
 export interface Point {
   x: number;
@@ -48,7 +61,7 @@ export interface StickyElement extends BaseElement {
 }
 
 export interface ShapeElementData extends BaseElement {
-  type: 'rectangle' | 'circle';
+  type: 'rectangle' | 'circle' | 'diamond';
   fill: string;
   stroke: string;
   strokeWidth: number;
@@ -58,6 +71,13 @@ export interface ShapeElementData extends BaseElement {
   fontSize?: number;
   fontColor?: string;
   textAlign?: 'left' | 'center' | 'right';
+}
+
+export interface FrameElementData extends BaseElement {
+  type: 'frame';
+  title: string;
+  fill?: string;
+  stroke?: string;
 }
 
 export interface ArrowElementData extends BaseElement {
@@ -94,6 +114,7 @@ export interface TextElementData extends BaseElement {
 export type CanvasElement =
   | StickyElement
   | ShapeElementData
+  | FrameElementData
   | ArrowElementData
   | DrawElementData
   | TextElementData;
@@ -132,6 +153,7 @@ export interface BoardMetadata {
   lastModified: number;
   version: number;
   thumbnailColor?: string;
+  isStarred?: boolean;
 }
 
 export interface BoardState {
@@ -140,9 +162,6 @@ export interface BoardState {
   viewport: ViewportTransform;
 }
 
-// ==========================================
-// Stage 7: Auth & User Accounts
-// ==========================================
 export interface User {
   id: string;
   name: string;
@@ -155,14 +174,11 @@ export interface BoardRecord extends BoardState {
   isFavorite?: boolean;
 }
 
-// ==========================================
-// Stage 8: Real-Time Presence & Collaboration
-// ==========================================
 export interface CollaboratorPresence {
   id: string;
   user: User;
   boardId: string;
-  cursor: Point; // in world coordinates
+  cursor: Point;
   lastActive: number;
   isSimulated?: boolean;
   selectedElementId?: string;

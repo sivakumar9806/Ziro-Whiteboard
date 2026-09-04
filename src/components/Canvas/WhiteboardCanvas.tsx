@@ -144,8 +144,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       return;
     }
 
-    // 5. Shape creation tools (Rectangle, Circle)
-    if (activeTool === 'rectangle' || activeTool === 'circle') {
+    // 5. Shape creation tools (Rectangle, Circle, Diamond, Frame)
+    if (activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'diamond' || activeTool === 'frame') {
       setInteractionMode('creating_shape');
       setCreationStart(worldPt);
       setCreationCurrent(worldPt);
@@ -398,37 +398,59 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       setCreationCurrent(null);
     }
 
+    // Finalize Shape / Frame Creation
     if (interactionMode === 'creating_shape' && creationStart && creationCurrent) {
-      const width = Math.max(Math.abs(creationCurrent.x - creationStart.x), 120);
-      const height = Math.max(Math.abs(creationCurrent.y - creationStart.y), 80);
+      const minW = activeTool === 'frame' ? 300 : 120;
+      const minH = activeTool === 'frame' ? 200 : 80;
+      const width = Math.max(Math.abs(creationCurrent.x - creationStart.x), minW);
+      const height = Math.max(Math.abs(creationCurrent.y - creationStart.y), minH);
       const x = Math.min(creationStart.x, creationCurrent.x);
       const y = Math.min(creationStart.y, creationCurrent.y);
 
-      const shapeType = activeTool === 'circle' ? 'circle' : 'rectangle';
-      const newShapeId = `shape-${Date.now()}`;
-      const newShape: CanvasElement = {
-        id: newShapeId,
-        type: shapeType,
-        x,
-        y,
-        width,
-        height,
-        fill: activeFillColor || (shapeType === 'circle' ? '#eff6ff' : '#ffffff'),
-        stroke: activeStrokeColor || '#3b82f6',
-        strokeWidth: activeStrokeWidth || 2,
-        strokeStyle: 'solid',
-        borderRadius: shapeType === 'rectangle' ? 12 : undefined,
-        text: '',
-        fontSize: 16,
-        fontColor: '#1e293b',
-        textAlign: 'center',
-        zIndex: elements.length + 1,
-      };
+      if (activeTool === 'frame') {
+        const newFrameId = `frame-${Date.now()}`;
+        const newFrame: CanvasElement = {
+          id: newFrameId,
+          type: 'frame',
+          x,
+          y,
+          width,
+          height,
+          title: 'Frame 1',
+          fill: 'rgba(255, 255, 255, 0.75)',
+          stroke: '#cbd5e1',
+          zIndex: 0,
+        };
+        setElements((prev) => [newFrame, ...prev]);
+        setSelectedIds([newFrameId]);
+      } else {
+        const shapeType = activeTool === 'circle' ? 'circle' : activeTool === 'diamond' ? 'diamond' : 'rectangle';
+        const newShapeId = `shape-${Date.now()}`;
+        const newShape: CanvasElement = {
+          id: newShapeId,
+          type: shapeType,
+          x,
+          y,
+          width,
+          height,
+          fill: activeFillColor || (shapeType === 'circle' ? '#eff6ff' : '#ffffff'),
+          stroke: activeStrokeColor || '#4262ff',
+          strokeWidth: activeStrokeWidth || 2,
+          strokeStyle: 'solid',
+          borderRadius: shapeType === 'rectangle' ? 12 : undefined,
+          text: '',
+          fontSize: 15,
+          fontColor: '#1e293b',
+          textAlign: 'center',
+          zIndex: elements.length + 1,
+        };
 
-      setElements((prev) => [...prev, newShape]);
-      setSelectedIds([newShapeId]);
+        setElements((prev) => [...prev, newShape]);
+        setSelectedIds([newShapeId]);
+        setEditingElementId(newShapeId);
+      }
+
       setActiveTool('select');
-      setEditingElementId(newShapeId);
       setCreationStart(null);
       setCreationCurrent(null);
     }

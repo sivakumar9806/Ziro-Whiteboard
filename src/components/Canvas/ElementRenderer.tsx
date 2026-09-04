@@ -2,6 +2,7 @@ import React from 'react';
 import type { CanvasElement } from '../../types/whiteboard';
 import { StickyNoteElement } from '../Elements/StickyNoteElement';
 import { ShapeElement } from '../Elements/ShapeElement';
+import { FrameElement } from '../Elements/FrameElement';
 import { ArrowElement } from '../Elements/ArrowElement';
 import { FreehandElement } from '../Elements/FreehandElement';
 import { TextElement } from '../Elements/TextElement';
@@ -27,7 +28,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
     position: 'absolute',
     left: `${element.x}px`,
     top: `${element.y}px`,
-    zIndex: element.zIndex,
+    zIndex: element.type === 'frame' ? 0 : element.zIndex,
     opacity: element.opacity ?? 1,
     transformOrigin: 'center center',
     transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
@@ -43,6 +44,16 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
 
   return (
     <div style={containerStyle} data-element-id={element.id}>
+      {element.type === 'frame' && (
+        <FrameElement
+          element={element}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+          isEditingDirectly={isEditingDirectly}
+          onStartEditing={onStartEditing}
+          onFinishEditing={onFinishEditing}
+        />
+      )}
       {element.type === 'sticky' && (
         <StickyNoteElement
           element={element}
@@ -53,7 +64,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
           onFinishEditing={onFinishEditing}
         />
       )}
-      {(element.type === 'rectangle' || element.type === 'circle') && (
+      {(element.type === 'rectangle' || element.type === 'circle' || element.type === 'diamond') && (
         <ShapeElement
           element={element}
           isSelected={isSelected}
