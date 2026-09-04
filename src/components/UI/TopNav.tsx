@@ -11,8 +11,10 @@ import {
   LayoutTemplate,
   Check,
   ChevronDown,
+  LayoutDashboard,
+  Users,
 } from 'lucide-react';
-import type { BoardMetadata } from '../../types/whiteboard';
+import type { BoardMetadata, User, CollaboratorPresence } from '../../types/whiteboard';
 
 interface TopNavProps {
   metadata: BoardMetadata;
@@ -27,6 +29,12 @@ interface TopNavProps {
   onClearBoard: () => void;
   onOpenTemplates: () => void;
   onOpenShortcuts: () => void;
+  onOpenDashboard: () => void;
+  onOpenAuth: () => void;
+  currentUser: User;
+  collaborators: CollaboratorPresence[];
+  isSimulating: boolean;
+  onToggleSimulation: () => void;
   saveStatus: 'saved' | 'saving';
 }
 
@@ -43,6 +51,12 @@ export const TopNav: React.FC<TopNavProps> = ({
   onClearBoard,
   onOpenTemplates,
   onOpenShortcuts,
+  onOpenDashboard,
+  onOpenAuth,
+  currentUser,
+  collaborators,
+  isSimulating,
+  onToggleSimulation,
   saveStatus,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -70,14 +84,29 @@ export const TopNav: React.FC<TopNavProps> = ({
 
   return (
     <header className="top-nav-container">
-      {/* Left: Brand Logo & Editable Title */}
+      {/* Left: Brand, Dashboard Switcher & Editable Title */}
       <div className="top-nav-left">
-        <div className="brand-badge">
+        <button
+          className="brand-badge clickable-brand"
+          onClick={onOpenDashboard}
+          title="Open My Boards Workspace"
+        >
           <div className="brand-logo-icon">
             <span className="brand-m">M</span>
           </div>
           <span className="brand-name">MiroBoard</span>
-        </div>
+        </button>
+
+        <button
+          className="nav-dashboard-btn"
+          onClick={onOpenDashboard}
+          title="Open Workspace Dashboard"
+        >
+          <LayoutDashboard size={15} />
+          <span>My Boards</span>
+        </button>
+
+        <div className="divider-v" />
 
         <div className="title-section">
           {isEditingTitle ? (
@@ -109,7 +138,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             </h1>
           )}
 
-          <div className="save-status-badge" title="Automatically saved to localStorage">
+          <div className="save-status-badge" title="Automatically saved to local database">
             {saveStatus === 'saved' ? (
               <>
                 <Check size={13} style={{ color: '#10b981' }} />
@@ -125,8 +154,47 @@ export const TopNav: React.FC<TopNavProps> = ({
         </div>
       </div>
 
-      {/* Middle / Right: Actions & Tools */}
+      {/* Middle / Right: Actions, Real-time Collab Avatars, & User Profile */}
       <div className="top-nav-right">
+        {/* Active Collaborators Presence Stack */}
+        <div className="collaborators-avatar-stack" title={`${collaborators.length + 1} users active on this board`}>
+          {/* Current User */}
+          <div
+            className="user-avatar-pill current-user-avatar"
+            style={{ backgroundColor: currentUser.avatarColor }}
+            onClick={onOpenAuth}
+            title={`${currentUser.name} (You)`}
+          >
+            {currentUser.name.charAt(0)}
+          </div>
+
+          {/* Active Remote / Simulated Collaborators */}
+          {collaborators.map((collab) => (
+            <div
+              key={collab.id}
+              className="user-avatar-pill remote-collab-avatar"
+              style={{ backgroundColor: collab.user.avatarColor || '#3b82f6' }}
+              title={`${collab.user.name} (Online)`}
+            >
+              {collab.user.name.charAt(0)}
+            </div>
+          ))}
+        </div>
+
+        {/* Real-time Collaboration Toggle */}
+        <button
+          className={`collab-sim-btn ${isSimulating ? 'active' : ''}`}
+          onClick={onToggleSimulation}
+          title={isSimulating ? 'Stop live collaborator simulation' : 'Simulate live colleagues working on canvas'}
+        >
+          <Users size={14} />
+          <span>{isSimulating ? 'Live Collab ON' : 'Simulate Collab'}</span>
+          {isSimulating && <span className="live-pulsing-dot" />}
+        </button>
+
+        <div className="divider-v" />
+
+        {/* Undo & Redo */}
         <div className="action-button-group">
           <button
             className={`nav-icon-button ${!canUndo ? 'disabled' : ''}`}
@@ -148,11 +216,13 @@ export const TopNav: React.FC<TopNavProps> = ({
 
         <div className="divider-v" />
 
+        {/* Templates */}
         <button className="nav-text-button" onClick={onOpenTemplates} title="Browse Starter Templates">
           <LayoutTemplate size={16} style={{ color: '#6366f1' }} />
           <span>Templates</span>
         </button>
 
+        {/* Export Dropdown */}
         <div className="relative">
           <button
             className="nav-text-button export-btn"
@@ -219,6 +289,7 @@ export const TopNav: React.FC<TopNavProps> = ({
 
         <div className="divider-v" />
 
+        {/* Clear Board */}
         <button
           className="nav-icon-button clear-btn"
           onClick={onClearBoard}
@@ -227,6 +298,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           <Trash2 size={17} />
         </button>
 
+        {/* Shortcuts Help */}
         <button
           className="nav-icon-button help-btn"
           onClick={onOpenShortcuts}

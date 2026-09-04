@@ -7,6 +7,7 @@ import type {
   SelectionBounds,
   ResizeHandle,
   StickyColor,
+  CollaboratorPresence,
 } from '../../types/whiteboard';
 import {
   screenToWorld,
@@ -19,6 +20,7 @@ import { GridBackground } from './GridBackground';
 import { ElementRenderer } from './ElementRenderer';
 import { SelectionBox } from './SelectionBox';
 import { MarqueeSelect } from './MarqueeSelect';
+import { CollaboratorCursors } from './CollaboratorCursors';
 
 interface WhiteboardCanvasProps {
   elements: CanvasElement[];
@@ -37,6 +39,8 @@ interface WhiteboardCanvasProps {
   activeStrokeColor: string;
   activeFillColor: string;
   activeStrokeWidth: number;
+  collaborators?: CollaboratorPresence[];
+  onLocalCursorMove?: (worldPt: Point) => void;
 }
 
 type InteractionMode =
@@ -65,6 +69,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   activeStrokeColor,
   activeFillColor,
   activeStrokeWidth,
+  collaborators = [],
+  onLocalCursorMove,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -97,6 +103,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const containerRect = containerRef.current.getBoundingClientRect();
     const screenPt: Point = { x: e.clientX, y: e.clientY };
     const worldPt = screenToWorld(screenPt, viewport, containerRect);
+
+    // Broadcast cursor position
+    onLocalCursorMove?.(worldPt);
 
     // 1. Pan gestures: Middle click or Spacebar held or Pan tool selected
     if (e.button === 1 || isSpacePanning || activeTool === 'pan') {
@@ -229,6 +238,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const containerRect = containerRef.current.getBoundingClientRect();
     const screenPt: Point = { x: e.clientX, y: e.clientY };
     const worldPt = screenToWorld(screenPt, viewport, containerRect);
+
+    // Broadcast live cursor to collaborators
+    onLocalCursorMove?.(worldPt);
 
     if (interactionMode === 'panning') {
       const dx = screenPt.x - dragStartPoint.x;
@@ -527,6 +539,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             onFinishEditing={() => setEditingElementId(null)}
           />
         ))}
+
+        {/* Real-time Collaborative Cursors */}
+        <CollaboratorCursors collaborators={collaborators} />
 
         {interactionMode === 'drawing' && currentDrawPoints.length > 0 && (
           <ElementRenderer

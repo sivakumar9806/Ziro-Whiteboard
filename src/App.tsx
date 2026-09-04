@@ -5,8 +5,21 @@ import type {
   CanvasElement,
   StickyColor,
   BoardMetadata,
+  User,
+  BoardRecord,
+  CollaboratorPresence,
+  Point,
 } from './types/whiteboard';
-import { loadBoardFromStorage, saveBoardToStorage } from './utils/storage';
+import { getCurrentUser } from './services/authService';
+import {
+  getAllBoards,
+  getBoardById,
+  getActiveBoardId,
+  saveBoardRecord,
+  setActiveBoardId,
+} from './services/boardService';
+import { realtimeService } from './services/realtimeService';
+import { CollabSimulation } from './utils/collabSimulation';
 import { exportToPng, exportToJson, importFromJsonFile } from './utils/export';
 import type { BoardTemplate } from './utils/templates';
 import { useHistory } from './hooks/useHistory';
@@ -21,15 +34,28 @@ import { ZoomControls } from './components/UI/ZoomControls';
 import { Minimap } from './components/UI/Minimap';
 import { TemplatesModal } from './components/UI/TemplatesModal';
 import { ShortcutsModal } from './components/UI/ShortcutsModal';
+import { BoardsDashboardModal } from './components/UI/BoardsDashboardModal';
+import { AuthModal } from './components/UI/AuthModal';
 
 export const App: React.FC = () => {
-  // 1. Initial State from LocalStorage
-  const initialData = useRef(loadBoardFromStorage()).current;
+  // 1. Authentication State
+  const [currentUser, setCurrentUser] = useState<User>(() => getCurrentUser());
 
-  const [metadata, setMetadata] = useState<BoardMetadata>(initialData.metadata);
+  // 2. Active Board State
+  const initialActiveBoard = useRef<BoardRecord>(
+    (() => {
+      const activeId = getActiveBoardId();
+      const found = getBoardById(activeId);
+      if (found) return found;
+      const all = getAllBoards();
+      return all[0];
+    })()
+  ).current;
+
+  const [metadata, setMetadata] = useState<BoardMetadata>(initialActiveBoard.metadata);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
 
-  // 2. History & Elements Engine
+  // 3. History & Elements Engine
   const {
     elements,
     setElements,
@@ -39,9 +65,9 @@ export const App: React.FC = () => {
     redo,
     canUndo,
     canRedo,
-  } = useHistory(initialData.elements);
+  } = useHistory(initialActiveBoard.elements);
 
-  // 3. Canvas Viewport Engine
+  // 4. Canvas Viewport Engine
   const {
     viewport,
     setViewport,
@@ -52,34 +78,149 @@ export const App: React.FC = () => {
     zoomOut,
     resetZoom,
     fitToElements,
-  } = useCanvasTransform(initialData.viewport);
+  } = useCanvasTransform(initialActiveBoard.viewport);
 
-  // 4. Tools & Interaction State
+  // 5. Tools & Interaction State
   const [activeTool, setActiveTool] = useState<ToolType>('select');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSpacePanning, setIsSpacePanning] = useState(false);
 
-  // 5. Active Tool Options
+  // 6. Active Tool Options
   const [activeStickyColor, setActiveStickyColor] = useState<StickyColor>('yellow');
   const [activeStrokeColor] = useState<string>('#3b82f6');
   const [activeFillColor] = useState<string>('#ffffff');
   const [activeStrokeWidth] = useState<number>(2);
 
-  // 6. UI Modals
+  // 7. Real-Time Collaboration & Presence State
+  const [collaborators, setCollaborators] = useState<CollaboratorPresence[]>([]);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const simulationRef = useRef<CollabSimulation | null>(null);
+
+  // 8. UI Modals
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
 
-  // Auto-save debounced effect
+  // Auto-save debounced effect to local board database
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(() => {
-      saveBoardToStorage({ metadata, elements, viewport });
+      saveBoardRecord({ metadata, elements, viewport });
       setSaveStatus('saved');
+      // Broadcast element updates to open collaborator tabs
+      realtimeService.broadcastElements(metadata.id, elements);
     }, 400);
 
     return () => clearTimeout(timer);
   }, [metadata, elements, viewport]);
+
+  // Real-Time Cross-Tab Collaboration Listener
+  useEffect(() => {
+    const unsubscribe = realtimeService.subscribe((msg) => {
+      if (msg.type === 'PRESENCE_UPDATE') {
+        if (msg.payload.id === realtimeService.clientId) return; // ignore self
+        if (msg.payload.boardId !== metadata.id) return; // different board
+
+        setCollaborators((prev) => {
+          const filtered = prev.filter((c) => c.id !== msg.payload.id);
+          return [...filtered, msg.payload];
+        });
+      } else if (msg.type === 'ELEMENTS_SYNC') {
+        if (msg.payload.senderId === realtimeService.clientId) return;
+        if (msg.payload.boardId !== metadata.id) return;
+
+        // Sync remote elements
+        setElementsTransient(() => msg.payload.elements);
+      } else if (msg.type === 'USER_LEFT') {
+        setCollaborators((prev) => prev.filter((c) => c.id !== msg.payload.id));
+      }
+    });
+
+    // Periodically prune stale collaborators (inactive > 10s)
+    const pruneTimer = setInterval(() => {
+      setCollaborators((prev) =>
+        prev.filter((c) => c.isSimulated || Date.now() - c.lastActive < 10000)
+      );
+    }, 4000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(pruneTimer);
+      realtimeService.broadcastLeave(metadata.id);
+    };
+  }, [metadata.id, setElementsTransient]);
+
+  // Local Cursor broadcast handler
+  const handleLocalCursorMove = useCallback(
+    (worldPt: Point) => {
+      const presence = realtimeService.createPresenceObject(
+        currentUser,
+        metadata.id,
+        worldPt.x,
+        worldPt.y
+      );
+      realtimeService.broadcastPresence(presence);
+    },
+    [currentUser, metadata.id]
+  );
+
+  // Toggle Live Collaborator Simulation
+  const handleToggleSimulation = useCallback(() => {
+    if (isSimulating) {
+      simulationRef.current?.stop();
+      simulationRef.current = null;
+      setCollaborators((prev) => prev.filter((c) => !c.isSimulated));
+      setIsSimulating(false);
+    } else {
+      const sim = new CollabSimulation(
+        metadata.id,
+        (presence) => {
+          setCollaborators((prev) => {
+            const others = prev.filter((c) => c.id !== presence.id);
+            return [...others, presence];
+          });
+        },
+        (newElement) => {
+          setElements((prev) => [...prev, newElement]);
+        }
+      );
+      sim.start();
+      simulationRef.current = sim;
+      setIsSimulating(true);
+    }
+  }, [isSimulating, metadata.id, setElements]);
+
+  // Clean up simulation on unmount
+  useEffect(() => {
+    return () => {
+      simulationRef.current?.stop();
+    };
+  }, []);
+
+  // Board Switcher Handler
+  const handleSwitchBoard = useCallback(
+    (targetBoard: BoardRecord) => {
+      setMetadata(targetBoard.metadata);
+      setElements(targetBoard.elements);
+      resetHistory(targetBoard.elements);
+      if (targetBoard.viewport) {
+        setViewport(targetBoard.viewport);
+      }
+      setActiveBoardId(targetBoard.metadata.id);
+      setSelectedIds([]);
+      setCollaborators([]);
+
+      // Reset simulation if active
+      if (isSimulating) {
+        simulationRef.current?.stop();
+        simulationRef.current = null;
+        setIsSimulating(false);
+      }
+    },
+    [setElements, resetHistory, setViewport, isSimulating]
+  );
 
   // Actions
   const deleteSelected = useCallback(() => {
@@ -244,6 +385,7 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-container" style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      {/* Top Navigation Bar with Multi-board & Collab Presences */}
       <TopNav
         metadata={metadata}
         onUpdateTitle={(title) => setMetadata((prev) => ({ ...prev, title }))}
@@ -257,9 +399,16 @@ export const App: React.FC = () => {
         onClearBoard={handleClearBoard}
         onOpenTemplates={() => setIsTemplatesOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenDashboard={() => setIsDashboardOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        currentUser={currentUser}
+        collaborators={collaborators}
+        isSimulating={isSimulating}
+        onToggleSimulation={handleToggleSimulation}
         saveStatus={saveStatus}
       />
 
+      {/* Left Tool Dock */}
       <LeftToolbar
         activeTool={activeTool}
         setActiveTool={setActiveTool}
@@ -267,6 +416,7 @@ export const App: React.FC = () => {
         setActiveStickyColor={setActiveStickyColor}
       />
 
+      {/* Contextual Properties Floating Dock */}
       {selectedElements.length > 0 && (
         <ContextPropertyBar
           selectedElements={selectedElements}
@@ -278,6 +428,7 @@ export const App: React.FC = () => {
         />
       )}
 
+      {/* Main Interactive Whiteboard Canvas with Live Cursors */}
       <WhiteboardCanvas
         elements={elements}
         setElements={setElements}
@@ -295,8 +446,11 @@ export const App: React.FC = () => {
         activeStrokeColor={activeStrokeColor}
         activeFillColor={activeFillColor}
         activeStrokeWidth={activeStrokeWidth}
+        collaborators={collaborators}
+        onLocalCursorMove={handleLocalCursorMove}
       />
 
+      {/* Bottom Right Zoom & Navigation Dock */}
       <ZoomControls
         zoom={viewport.zoom}
         onZoomIn={() => zoomIn()}
@@ -311,6 +465,7 @@ export const App: React.FC = () => {
         onSetZoomExact={(z) => setViewport((prev) => ({ ...prev, zoom: z }))}
       />
 
+      {/* Interactive Minimap */}
       {showMinimap && (
         <Minimap
           elements={elements}
@@ -320,12 +475,30 @@ export const App: React.FC = () => {
         />
       )}
 
+      {/* Workspace Boards Dashboard Modal */}
+      <BoardsDashboardModal
+        isOpen={isDashboardOpen}
+        onClose={() => setIsDashboardOpen(false)}
+        activeBoardId={metadata.id}
+        onSwitchBoard={handleSwitchBoard}
+      />
+
+      {/* User Accounts & Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        currentUser={currentUser}
+        onUserChange={(user) => setCurrentUser(user)}
+      />
+
+      {/* Starter Templates Modal */}
       <TemplatesModal
         isOpen={isTemplatesOpen}
         onClose={() => setIsTemplatesOpen(false)}
         onSelectTemplate={handleSelectTemplate}
       />
 
+      {/* Keyboard Shortcuts Modal */}
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}

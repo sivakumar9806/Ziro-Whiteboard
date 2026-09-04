@@ -70,7 +70,7 @@ export interface ArrowElementData extends BaseElement {
   strokeWidth: number;
   strokeStyle: 'solid' | 'dashed';
   arrowHead: 'end' | 'both' | 'none';
-  curve?: number; // offset for curved arrows
+  curve?: number;
   text?: string;
 }
 
@@ -128,8 +128,10 @@ export type ResizeHandle =
 export interface BoardMetadata {
   id: string;
   title: string;
+  ownerId?: string;
   lastModified: number;
   version: number;
+  thumbnailColor?: string;
 }
 
 export interface BoardState {
@@ -137,3 +139,36 @@ export interface BoardState {
   elements: CanvasElement[];
   viewport: ViewportTransform;
 }
+
+// ==========================================
+// Stage 7: Auth & User Accounts
+// ==========================================
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatarColor: string;
+  roleTitle?: string;
+}
+
+export interface BoardRecord extends BoardState {
+  isFavorite?: boolean;
+}
+
+// ==========================================
+// Stage 8: Real-Time Presence & Collaboration
+// ==========================================
+export interface CollaboratorPresence {
+  id: string;
+  user: User;
+  boardId: string;
+  cursor: Point; // in world coordinates
+  lastActive: number;
+  isSimulated?: boolean;
+  selectedElementId?: string;
+}
+
+export type RealtimeMessage =
+  | { type: 'PRESENCE_UPDATE'; payload: CollaboratorPresence }
+  | { type: 'ELEMENTS_SYNC'; payload: { boardId: string; elements: CanvasElement[]; senderId: string } }
+  | { type: 'USER_LEFT'; payload: { id: string; boardId: string } };
