@@ -30,7 +30,6 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   onStartEditing,
   onFinishEditing,
 }) => {
-  const [isEditing, setIsEditing] = useState(isEditingDirectly || false);
   const [draftText, setDraftText] = useState(element.text || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -41,34 +40,23 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   }, [element.text]);
 
   useEffect(() => {
-    if (isEditingDirectly) {
-      setIsEditing(true);
+    if ((isSelected || isEditingDirectly) && textareaRef.current) {
+      if (isEditingDirectly) {
+        textareaRef.current.focus();
+      }
     }
-  }, [isEditingDirectly]);
+  }, [isSelected, isEditingDirectly]);
 
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [isEditing]);
-
-  const handleStartEditing = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsEditing(true);
-    onStartEditing?.();
-  };
-
-  const handleBlur = () => {
-    setIsEditing(false);
-    onUpdate(element.id, { text: draftText });
-    onFinishEditing?.();
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setDraftText(val);
+    onUpdate(element.id, { text: val });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation();
     if (e.key === 'Escape') {
-      setIsEditing(false);
-      setDraftText(element.text || '');
+      textareaRef.current?.blur();
       onFinishEditing?.();
     }
   };
@@ -84,73 +72,60 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           ? `0 14px 28px -4px ${theme.shadow}, 0 4px 10px rgba(0,0,0,0.06), 0 0 0 1.5px #4262ff`
           : `0 8px 18px -2px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.03)`,
         borderRadius: '3px',
-        padding: '16px',
+        padding: '14px',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        userSelect: isEditing ? 'text' : 'none',
-        cursor: isEditing ? 'text' : 'pointer',
         overflow: 'hidden',
         boxSizing: 'border-box',
         transition: 'box-shadow 0.15s ease',
+        cursor: 'text',
       }}
-      onDoubleClick={handleStartEditing}
-      onClick={(e) => {
-        if (isSelected && !isEditing) {
-          handleStartEditing(e);
-        }
+      onClick={() => {
+        onStartEditing?.();
       }}
     >
-      {isEditing ? (
-        <textarea
-          ref={textareaRef}
-          value={draftText}
-          onChange={(e) => {
-            setDraftText(e.target.value);
-            onUpdate(element.id, { text: e.target.value });
-          }}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            outline: 'none',
-            backgroundColor: 'transparent',
-            resize: 'none',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: `${element.fontSize || 14}px`,
-            color: element.fontColor || theme.text,
-            textAlign: element.textAlign || 'left',
-            lineHeight: 1.45,
-            padding: 0,
-            fontWeight: 500,
-            cursor: 'text',
-          }}
-          placeholder="Type something..."
-        />
-      ) : (
-        <div
-          style={{
-            width: '100%',
-            height: '100%',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: `${element.fontSize || 14}px`,
-            color: element.fontColor || theme.text,
-            textAlign: element.textAlign || 'left',
-            lineHeight: 1.45,
-            fontWeight: 500,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            overflow: 'hidden',
-            pointerEvents: 'none',
-          }}
-        >
-          {element.text || <span style={{ opacity: 0.35, fontStyle: 'italic' }}>Empty sticky note</span>}
-        </div>
-      )}
+      <textarea
+        ref={textareaRef}
+        value={draftText}
+        onChange={handleChange}
+        onFocus={() => {
+          onStartEditing?.();
+        }}
+        onBlur={() => {
+          onFinishEditing?.();
+          onUpdate(element.id, { text: draftText });
+        }}
+        onKeyDown={handleKeyDown}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          outline: 'none',
+          backgroundColor: 'transparent',
+          resize: 'none',
+          fontFamily: "'Inter', sans-serif",
+          fontSize: `${element.fontSize || 14}px`,
+          color: element.fontColor || theme.text,
+          textAlign: element.textAlign || 'left',
+          lineHeight: 1.45,
+          padding: 0,
+          fontWeight: 500,
+          cursor: 'text',
+          pointerEvents: 'auto',
+          userSelect: 'text',
+        }}
+        placeholder="Type something..."
+      />
 
       {/* Miro signature folded corner bottom right */}
       <div
