@@ -1,12 +1,23 @@
 import type { BoardRecord, CanvasElement } from '../types/whiteboard';
 import { INITIAL_WELCOME_BOARD, TEMPLATES } from '../utils/templates';
 
-const BOARDS_DATABASE_KEY = 'miro_boards_database_v1';
-const ACTIVE_BOARD_ID_KEY = 'miro_active_board_id_v1';
+const BOARDS_DATABASE_KEY = 'ziro_boards_database_v2';
+const ACTIVE_BOARD_ID_KEY = 'ziro_active_board_id_v2';
 
 export function getAllBoards(): BoardRecord[] {
   try {
-    const raw = localStorage.getItem(BOARDS_DATABASE_KEY);
+    let raw = localStorage.getItem(BOARDS_DATABASE_KEY);
+    // Auto-migrate from v1 if needed
+    if (!raw) {
+      const v1Raw = localStorage.getItem('miro_boards_database_v1');
+      if (v1Raw) {
+        raw = v1Raw
+          .replace(/My Miro Whiteboard/g, 'My Ziro Whiteboard')
+          .replace(/Miro Whiteboard/g, 'Ziro Whiteboard');
+        localStorage.setItem(BOARDS_DATABASE_KEY, raw);
+      }
+    }
+
     if (!raw) {
       const seedBoards = getSeedBoards();
       localStorage.setItem(BOARDS_DATABASE_KEY, JSON.stringify(seedBoards));
@@ -14,7 +25,19 @@ export function getAllBoards(): BoardRecord[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Ensure any "Miro" title is renamed to "Ziro"
+      return parsed.map((b: BoardRecord) => {
+        if (b.metadata && b.metadata.title) {
+          const newTitle = b.metadata.title
+            .replace(/My Miro Whiteboard/g, 'My Ziro Whiteboard')
+            .replace(/Miro Whiteboard/g, 'Ziro Whiteboard');
+          return {
+            ...b,
+            metadata: { ...b.metadata, title: newTitle },
+          };
+        }
+        return b;
+      });
     }
     return getSeedBoards();
   } catch {
@@ -23,7 +46,7 @@ export function getAllBoards(): BoardRecord[] {
 }
 
 export function getActiveBoardId(): string {
-  const stored = localStorage.getItem(ACTIVE_BOARD_ID_KEY);
+  const stored = localStorage.getItem(ACTIVE_BOARD_ID_KEY) || localStorage.getItem('miro_active_board_id_v1');
   if (stored) return stored;
   const boards = getAllBoards();
   return boards[0]?.metadata.id || 'default-board';

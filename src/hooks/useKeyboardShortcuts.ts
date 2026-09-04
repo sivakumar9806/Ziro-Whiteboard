@@ -16,10 +16,12 @@ interface UseKeyboardShortcutsProps {
   resetZoom: () => void;
   setIsSpacePanning: (panning: boolean) => void;
   openShortcutsModal: () => void;
+  onStartEditing?: (id: string) => void;
 }
 
 export function useKeyboardShortcuts({
   setActiveTool,
+  selectedIds,
   deleteSelected,
   duplicateSelected,
   selectAll,
@@ -31,6 +33,7 @@ export function useKeyboardShortcuts({
   resetZoom,
   setIsSpacePanning,
   openShortcutsModal,
+  onStartEditing,
 }: UseKeyboardShortcutsProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -93,6 +96,12 @@ export function useKeyboardShortcuts({
       if (cmdOrCtrl && e.key === '0') {
         e.preventDefault();
         resetZoom();
+        return;
+      }
+
+      if (e.key === 'Enter' && selectedIds.length === 1) {
+        e.preventDefault();
+        onStartEditing?.(selectedIds[0]);
         return;
       }
 

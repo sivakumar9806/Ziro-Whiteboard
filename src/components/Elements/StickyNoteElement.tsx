@@ -31,10 +31,14 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   onFinishEditing,
 }) => {
   const [isEditing, setIsEditing] = useState(isEditingDirectly || false);
-  const [draftText, setDraftText] = useState(element.text);
+  const [draftText, setDraftText] = useState(element.text || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const theme = MIRO_STICKY_THEMES[element.colorTheme] || MIRO_STICKY_THEMES.yellow;
+
+  useEffect(() => {
+    setDraftText(element.text || '');
+  }, [element.text]);
 
   useEffect(() => {
     if (isEditingDirectly) {
@@ -45,11 +49,10 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.select();
     }
   }, [isEditing]);
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
+  const handleStartEditing = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsEditing(true);
     onStartEditing?.();
@@ -62,9 +65,10 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
     if (e.key === 'Escape') {
       setIsEditing(false);
-      setDraftText(element.text);
+      setDraftText(element.text || '');
       onFinishEditing?.();
     }
   };
@@ -85,20 +89,30 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
         flexDirection: 'column',
         position: 'relative',
         userSelect: isEditing ? 'text' : 'none',
-        cursor: isEditing ? 'text' : 'default',
+        cursor: isEditing ? 'text' : 'pointer',
         overflow: 'hidden',
         boxSizing: 'border-box',
         transition: 'box-shadow 0.15s ease',
       }}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={handleStartEditing}
+      onClick={(e) => {
+        if (isSelected && !isEditing) {
+          handleStartEditing(e);
+        }
+      }}
     >
       {isEditing ? (
         <textarea
           ref={textareaRef}
           value={draftText}
-          onChange={(e) => setDraftText(e.target.value)}
+          onChange={(e) => {
+            setDraftText(e.target.value);
+            onUpdate(element.id, { text: e.target.value });
+          }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           style={{
             width: '100%',
             height: '100%',
@@ -113,6 +127,7 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
             lineHeight: 1.45,
             padding: 0,
             fontWeight: 500,
+            cursor: 'text',
           }}
           placeholder="Type something..."
         />
@@ -130,6 +145,7 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
             overflow: 'hidden',
+            pointerEvents: 'none',
           }}
         >
           {element.text || <span style={{ opacity: 0.35, fontStyle: 'italic' }}>Empty sticky note</span>}

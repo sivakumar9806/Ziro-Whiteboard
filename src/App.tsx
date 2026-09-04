@@ -46,13 +46,22 @@ export const App: React.FC = () => {
     (() => {
       const activeId = getActiveBoardId();
       const found = getBoardById(activeId);
-      if (found) return found;
-      const all = getAllBoards();
-      return all[0];
+      const board = found || getAllBoards()[0];
+      if (board && board.metadata && board.metadata.title) {
+        board.metadata.title = board.metadata.title
+          .replace(/My Miro Whiteboard/g, 'My Ziro Whiteboard')
+          .replace(/Miro Whiteboard/g, 'Ziro Whiteboard');
+      }
+      return board;
     })()
   ).current;
 
-  const [metadata, setMetadata] = useState<BoardMetadata>(initialActiveBoard.metadata);
+  const [metadata, setMetadata] = useState<BoardMetadata>(() => ({
+    ...initialActiveBoard.metadata,
+    title: initialActiveBoard.metadata.title
+      .replace(/My Miro Whiteboard/g, 'My Ziro Whiteboard')
+      .replace(/Miro Whiteboard/g, 'Ziro Whiteboard'),
+  }));
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
 
   // 3. History & Elements Engine

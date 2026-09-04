@@ -75,9 +75,14 @@ export const TextElement: React.FC<TextElementProps> = ({
         <textarea
           ref={textareaRef}
           value={draftText}
-          onChange={(e) => setDraftText(e.target.value)}
+          onChange={(e) => {
+            setDraftText(e.target.value);
+            onUpdate(element.id, { text: e.target.value });
+          }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           style={{
             width: '100%',
             minHeight: `${element.height}px`,

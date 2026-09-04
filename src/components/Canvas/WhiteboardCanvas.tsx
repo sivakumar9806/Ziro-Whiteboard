@@ -109,6 +109,15 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     // 1. Pan gestures: Middle click or Spacebar held or Pan tool selected
     if (e.button === 1 || isSpacePanning || activeTool === 'pan') {
+      if (e.detail === 2) {
+        const hit = [...elements].reverse().find((el) => isPointInElement(worldPt, el));
+        if (hit) {
+          setActiveTool('select');
+          setSelectedIds([hit.id]);
+          setEditingElementId(hit.id);
+          return;
+        }
+      }
       setInteractionMode('panning');
       setDragStartPoint(screenPt);
       containerRef.current.setPointerCapture(e.pointerId);
@@ -239,6 +248,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       if (hitElement) {
         const isAlreadySelected = selectedIds.includes(hitElement.id);
 
+        if (e.detail === 2 || editingElementId === hitElement.id) {
+          setSelectedIds([hitElement.id]);
+          setEditingElementId(hitElement.id);
+          return;
+        }
+
+        if (editingElementId && editingElementId !== hitElement.id) {
+          setEditingElementId(null);
+        }
+
         if (e.shiftKey) {
           setSelectedIds((prev) =>
             isAlreadySelected ? prev.filter((id) => id !== hitElement.id) : [...prev, hitElement.id]
@@ -252,6 +271,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         setInitialElementsSnapshot(elements);
         containerRef.current.setPointerCapture(e.pointerId);
       } else {
+        setEditingElementId(null);
         if (!e.shiftKey) {
           setSelectedIds([]);
         }
