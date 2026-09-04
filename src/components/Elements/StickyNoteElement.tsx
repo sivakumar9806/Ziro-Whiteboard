@@ -11,7 +11,7 @@ interface StickyNoteElementProps {
 }
 
 // Authentic Miro Sticky Note Color Palette
-export const MIRO_STICKY_THEMES = {
+const MIRO_STICKY_THEMES: Record<string, { bg: string; border: string; text: string; shadow: string }> = {
   yellow: { bg: '#fff9b1', border: '#fef08a', text: '#3c3500', shadow: 'rgba(234, 179, 8, 0.15)' },
   blue: { bg: '#d0e7ff', border: '#bae6fd', text: '#002f6c', shadow: 'rgba(14, 165, 233, 0.15)' },
   green: { bg: '#d5f5e3', border: '#bbf7d0', text: '#0e4e26', shadow: 'rgba(34, 197, 94, 0.15)' },
