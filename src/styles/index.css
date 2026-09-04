@@ -1690,3 +1690,368 @@ html, body, #root {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.3; transform: scale(1.3); }
 }
+
+/* Shapes Matrix Flyout */
+.ziro-shapes-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.ziro-shape-matrix-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.12s ease;
+}
+
+.ziro-shape-matrix-btn:hover {
+  background: #edf0ff;
+  border-color: var(--miro-blue);
+  color: var(--miro-blue);
+}
+
+.ziro-shape-matrix-btn.active {
+  background: var(--miro-blue);
+  border-color: var(--miro-blue);
+  color: #ffffff;
+}
+
+/* Frames & Preset Menus */
+.ziro-frames-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ziro-frame-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.ziro-frame-menu-btn:hover {
+  background: #f1f5f9;
+  color: var(--miro-blue);
+}
+
+/* Meeting Timer Card */
+.ziro-timer-card {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 14px;
+  z-index: 1100;
+}
+
+.ziro-timer-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.ziro-timer-display {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--miro-navy);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 10px;
+}
+
+.ziro-timer-presets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.ziro-timer-presets button {
+  padding: 3px 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ziro-timer-presets button:hover {
+  border-color: var(--miro-blue);
+  color: var(--miro-blue);
+}
+
+.ziro-timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ziro-timer-start-btn {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  background: var(--miro-blue);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ziro-timer-reset-btn {
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Miro Comment Pins on Canvas */
+.ziro-comment-container {
+  position: relative;
+  overflow: visible;
+}
+
+.ziro-comment-pin-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 4px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom left;
+}
+
+.ziro-comment-pin-btn:hover {
+  transform: scale(1.12);
+}
+
+.ziro-comment-initials {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ziro-comment-card {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  width: 260px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+  z-index: 10000;
+  cursor: default;
+}
+
+.ziro-comment-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ziro-comment-author-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ziro-comment-avatar-mini {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ziro-comment-author-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.ziro-comment-time {
+  font-size: 10px;
+  color: var(--text-sub);
+}
+
+.ziro-comment-card-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.ziro-comment-resolve-btn, .ziro-comment-delete-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ziro-comment-resolve-btn:hover {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.ziro-comment-delete-btn:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.ziro-comment-textarea {
+  width: 100%;
+  min-height: 60px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  margin-bottom: 6px;
+}
+
+.ziro-comment-textarea:focus {
+  border-color: var(--miro-blue);
+}
+
+.ziro-comment-submit-btn {
+  width: 100%;
+  padding: 6px;
+  border: none;
+  background: var(--miro-blue);
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ziro-comment-text {
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.ziro-comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.ziro-comment-reply-item {
+  display: flex;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.ziro-comment-avatar-micro {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ziro-comment-reply-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.ziro-comment-reply-author {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.ziro-comment-reply-text {
+  font-size: 11px;
+  color: var(--text-main);
+}
+
+.ziro-comment-reply-input {
+  display: flex;
+  gap: 6px;
+}
+
+.ziro-comment-reply-input input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  outline: none;
+}
+
+.ziro-comment-reply-input button {
+  padding: 4px 8px;
+  border: none;
+  background: var(--miro-blue);
+  color: #ffffff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+

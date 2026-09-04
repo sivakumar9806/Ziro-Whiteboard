@@ -6,11 +6,13 @@ import { FrameElement } from '../Elements/FrameElement';
 import { ArrowElement } from '../Elements/ArrowElement';
 import { FreehandElement } from '../Elements/FreehandElement';
 import { TextElement } from '../Elements/TextElement';
+import { CommentElement } from '../Elements/CommentElement';
 
 interface ElementRendererProps {
   element: CanvasElement;
   isSelected: boolean;
   onUpdate: (id: string, updates: Partial<CanvasElement>) => void;
+  onDelete?: (id: string) => void;
   isEditingDirectly?: boolean;
   onStartEditing?: () => void;
   onFinishEditing?: () => void;
@@ -20,6 +22,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   element,
   isSelected,
   onUpdate,
+  onDelete,
   isEditingDirectly,
   onStartEditing,
   onFinishEditing,
@@ -41,6 +44,17 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
   if (element.type === 'draw') {
     return <FreehandElement element={element} isSelected={isSelected} />;
   }
+
+  const isShapeType = [
+    'rectangle',
+    'rounded_rectangle',
+    'circle',
+    'diamond',
+    'triangle',
+    'star',
+    'cloud',
+    'speech_bubble',
+  ].includes(element.type);
 
   return (
     <div style={containerStyle} data-element-id={element.id}>
@@ -64,14 +78,22 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
           onFinishEditing={onFinishEditing}
         />
       )}
-      {(element.type === 'rectangle' || element.type === 'circle' || element.type === 'diamond') && (
+      {isShapeType && (
         <ShapeElement
-          element={element}
+          element={element as any}
           isSelected={isSelected}
           onUpdate={onUpdate}
           isEditingDirectly={isEditingDirectly}
           onStartEditing={onStartEditing}
           onFinishEditing={onFinishEditing}
+        />
+      )}
+      {element.type === 'comment' && (
+        <CommentElement
+          element={element}
+          isSelected={isSelected}
+          onUpdate={(updates) => onUpdate(element.id, updates)}
+          onDelete={() => onDelete?.(element.id)}
         />
       )}
       {element.type === 'text' && (

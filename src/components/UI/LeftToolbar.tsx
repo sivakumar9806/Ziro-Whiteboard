@@ -6,6 +6,10 @@ import {
   Square,
   Circle,
   Diamond,
+  Triangle,
+  Star,
+  Cloud,
+  MessageSquare,
   MoveRight,
   PenTool,
   Type,
@@ -13,6 +17,11 @@ import {
   LayoutGrid,
   Check,
   Frame,
+  MessageCircle,
+  MoreHorizontal,
+  Smartphone,
+  Monitor,
+  Columns,
 } from 'lucide-react';
 import type { ToolType, StickyColor } from '../../types/whiteboard';
 
@@ -22,17 +31,18 @@ interface LeftToolbarProps {
   activeStickyColor: StickyColor;
   setActiveStickyColor: (color: StickyColor) => void;
   onOpenTemplates: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 export const MIRO_STICKY_SWATCHES: { color: StickyColor; bg: string; border: string; label: string }[] = [
   { color: 'yellow', bg: '#fff9b1', border: '#fef08a', label: 'Sunshine Yellow' },
-  { color: 'blue', bg: '#d0e7ff', border: '#bae6fd', label: 'Sky Blue' },
-  { color: 'green', bg: '#d5f5e3', border: '#bbf7d0', label: 'Mint Green' },
-  { color: 'pink', bg: '#f5d1c3', border: '#fecdd3', label: 'Soft Coral / Pink' },
-  { color: 'orange', bg: '#ffe0b2', border: '#fed7aa', label: 'Tangerine Orange' },
-  { color: 'purple', bg: '#e6d9ff', border: '#e9d5ff', label: 'Lavender Violet' },
-  { color: 'cyan', bg: '#cbf0f8', border: '#a5f3fc', label: 'Aqua Cyan' },
-  { color: 'gray', bg: '#f1f5f9', border: '#e2e8f0', label: 'Cool Slate' },
+  { color: 'green', bg: '#d5f692', border: '#bbf7d0', label: 'Mint Green' },
+  { color: 'cyan', bg: '#c0f2ee', border: '#a5f3fc', label: 'Turquoise Cyan' },
+  { color: 'blue', bg: '#a6c8ff', border: '#93c5fd', label: 'Sky Blue' },
+  { color: 'purple', bg: '#d0bfff', border: '#d8b4fe', label: 'Lavender Purple' },
+  { color: 'pink', bg: '#ffd5dc', border: '#fecdd3', label: 'Pastel Rose' },
+  { color: 'orange', bg: '#ffdfa9', border: '#fed7aa', label: 'Peach Orange' },
+  { color: 'gray', bg: '#e0e0e0', border: '#cbd5e1', label: 'Cool Smoke' },
 ];
 
 export const LeftToolbar: React.FC<LeftToolbarProps> = ({
@@ -41,12 +51,26 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
   activeStickyColor,
   setActiveStickyColor,
   onOpenTemplates,
+  onOpenShortcuts,
 }) => {
   const [showStickyMenu, setShowStickyMenu] = useState(false);
   const [showShapesMenu, setShowShapesMenu] = useState(false);
+  const [showFramesMenu, setShowFramesMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [hoveredTool, setHoveredTool] = useState<string | null>(null);
 
   const currentSticky = MIRO_STICKY_SWATCHES.find((s) => s.color === activeStickyColor) || MIRO_STICKY_SWATCHES[0];
+
+  const isShapeActive = [
+    'rectangle',
+    'rounded_rectangle',
+    'circle',
+    'diamond',
+    'triangle',
+    'star',
+    'cloud',
+    'speech_bubble',
+  ].includes(activeTool);
 
   return (
     <aside className="ziro-toolbar-container" aria-label="Ziro Whiteboard Tools">
@@ -63,6 +87,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('select');
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Select tool (V)"
           >
@@ -89,6 +114,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('pan');
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Hand tool (H)"
           >
@@ -115,6 +141,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               onOpenTemplates();
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Templates"
           >
@@ -141,6 +168,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('text');
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Text box (T)"
           >
@@ -167,8 +195,9 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('sticky');
               setShowStickyMenu((prev) => !prev);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
-            aria-label="Sticky note (S / N)"
+            aria-label="Sticky note (N / S)"
           >
             {activeTool === 'sticky' && <div className="ziro-active-pill" />}
             <StickyNote size={20} strokeWidth={2.2} />
@@ -213,28 +242,33 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 6. Shape Tool (Rectangle / Circle / Diamond) */}
+        {/* 6. Shape Tool (Flyout with 8 shapes) */}
         <div
           className="ziro-tool-item relative"
           onMouseEnter={() => setHoveredTool('shapes')}
           onMouseLeave={() => setHoveredTool(null)}
         >
           <button
-            className={`ziro-tool-btn ${activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'diamond' ? 'active' : ''}`}
+            className={`ziro-tool-btn ${isShapeActive ? 'active' : ''}`}
             onClick={() => {
-              setActiveTool('rectangle');
+              if (!isShapeActive) setActiveTool('rectangle');
               setShowShapesMenu((prev) => !prev);
               setShowStickyMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Shapes (R / O)"
           >
-            {(activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'diamond') && (
-              <div className="ziro-active-pill" />
-            )}
+            {isShapeActive && <div className="ziro-active-pill" />}
             {activeTool === 'circle' ? (
               <Circle size={20} strokeWidth={2.2} />
             ) : activeTool === 'diamond' ? (
               <Diamond size={20} strokeWidth={2.2} />
+            ) : activeTool === 'triangle' ? (
+              <Triangle size={20} strokeWidth={2.2} />
+            ) : activeTool === 'star' ? (
+              <Star size={20} strokeWidth={2.2} />
+            ) : activeTool === 'speech_bubble' ? (
+              <MessageSquare size={20} strokeWidth={2.2} />
             ) : (
               <Square size={20} strokeWidth={2.2} />
             )}
@@ -251,41 +285,96 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           {showShapesMenu && (
             <>
               <div className="flyout-backdrop" onClick={() => setShowShapesMenu(false)} />
-              <div className="ziro-flyout-card">
-                <div className="ziro-flyout-title">SHAPES</div>
-                <div className="ziro-shapes-row">
+              <div className="ziro-flyout-card" style={{ width: '220px' }}>
+                <div className="ziro-flyout-title">ALL SHAPES</div>
+                <div className="ziro-shapes-matrix">
                   <button
-                    className={`ziro-shape-choice-btn ${activeTool === 'rectangle' ? 'active' : ''}`}
+                    className={`ziro-shape-matrix-btn ${activeTool === 'rectangle' ? 'active' : ''}`}
                     onClick={() => {
                       setActiveTool('rectangle');
                       setShowShapesMenu(false);
                     }}
                     title="Rectangle"
                   >
-                    <Square size={18} strokeWidth={2} />
+                    <Square size={20} strokeWidth={2} />
                     <span>Rectangle</span>
                   </button>
                   <button
-                    className={`ziro-shape-choice-btn ${activeTool === 'circle' ? 'active' : ''}`}
+                    className={`ziro-shape-matrix-btn ${activeTool === 'rounded_rectangle' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('rounded_rectangle');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Rounded Rectangle"
+                  >
+                    <Square size={20} strokeWidth={2} style={{ borderRadius: '6px' }} />
+                    <span>Rounded</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-matrix-btn ${activeTool === 'circle' ? 'active' : ''}`}
                     onClick={() => {
                       setActiveTool('circle');
                       setShowShapesMenu(false);
                     }}
                     title="Circle"
                   >
-                    <Circle size={18} strokeWidth={2} />
+                    <Circle size={20} strokeWidth={2} />
                     <span>Circle</span>
                   </button>
                   <button
-                    className={`ziro-shape-choice-btn ${activeTool === 'diamond' ? 'active' : ''}`}
+                    className={`ziro-shape-matrix-btn ${activeTool === 'diamond' ? 'active' : ''}`}
                     onClick={() => {
                       setActiveTool('diamond');
                       setShowShapesMenu(false);
                     }}
-                    title="Diamond"
+                    title="Diamond (Flowchart Decision)"
                   >
-                    <Diamond size={18} strokeWidth={2} />
+                    <Diamond size={20} strokeWidth={2} />
                     <span>Diamond</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-matrix-btn ${activeTool === 'triangle' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('triangle');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Triangle"
+                  >
+                    <Triangle size={20} strokeWidth={2} />
+                    <span>Triangle</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-matrix-btn ${activeTool === 'star' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('star');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Star"
+                  >
+                    <Star size={20} strokeWidth={2} />
+                    <span>Star</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-matrix-btn ${activeTool === 'cloud' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('cloud');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Cloud"
+                  >
+                    <Cloud size={20} strokeWidth={2} />
+                    <span>Cloud</span>
+                  </button>
+                  <button
+                    className={`ziro-shape-matrix-btn ${activeTool === 'speech_bubble' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTool('speech_bubble');
+                      setShowShapesMenu(false);
+                    }}
+                    title="Speech Bubble / Callout"
+                  >
+                    <MessageSquare size={20} strokeWidth={2} />
+                    <span>Callout</span>
                   </button>
                 </div>
               </div>
@@ -305,6 +394,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('arrow');
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Connection Arrow (A / L)"
           >
@@ -313,7 +403,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           </button>
           {hoveredTool === 'arrow' && (
             <div className="ziro-tooltip">
-              <span>Connection Arrow</span>
+              <span>Connection Line</span>
               <kbd>A / L</kbd>
             </div>
           )}
@@ -331,6 +421,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('draw');
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Pen / Draw (P)"
           >
@@ -347,7 +438,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
 
         {/* 9. Frame Container Tool (F) */}
         <div
-          className="ziro-tool-item"
+          className="ziro-tool-item relative"
           onMouseEnter={() => setHoveredTool('frame')}
           onMouseLeave={() => setHoveredTool(null)}
         >
@@ -355,6 +446,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
             className={`ziro-tool-btn ${activeTool === 'frame' ? 'active' : ''}`}
             onClick={() => {
               setActiveTool('frame');
+              setShowFramesMenu((prev) => !prev);
               setShowStickyMenu(false);
               setShowShapesMenu(false);
             }}
@@ -363,17 +455,86 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
             {activeTool === 'frame' && <div className="ziro-active-pill" />}
             <Frame size={20} strokeWidth={2.2} />
           </button>
-          {hoveredTool === 'frame' && (
+          {hoveredTool === 'frame' && !showFramesMenu && (
             <div className="ziro-tooltip">
-              <span>Frame</span>
+              <span>Frames</span>
               <kbd>F</kbd>
+            </div>
+          )}
+
+          {/* Frames Flyout */}
+          {showFramesMenu && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowFramesMenu(false)} />
+              <div className="ziro-flyout-card" style={{ width: '200px' }}>
+                <div className="ziro-flyout-title">FRAME PRESETS</div>
+                <div className="ziro-frames-menu">
+                  <button
+                    className="ziro-frame-menu-btn"
+                    onClick={() => {
+                      setActiveTool('frame');
+                      setShowFramesMenu(false);
+                    }}
+                  >
+                    <Monitor size={16} />
+                    <span>16:9 Presentation</span>
+                  </button>
+                  <button
+                    className="ziro-frame-menu-btn"
+                    onClick={() => {
+                      setActiveTool('frame');
+                      setShowFramesMenu(false);
+                    }}
+                  >
+                    <Smartphone size={16} />
+                    <span>Phone / Mobile</span>
+                  </button>
+                  <button
+                    className="ziro-frame-menu-btn"
+                    onClick={() => {
+                      setActiveTool('frame');
+                      setShowFramesMenu(false);
+                    }}
+                  >
+                    <Columns size={16} />
+                    <span>Kanban Frame</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 10. Comment Tool (C) */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('comment')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'comment' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('comment');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+              setShowFramesMenu(false);
+            }}
+            aria-label="Comment (C)"
+          >
+            {activeTool === 'comment' && <div className="ziro-active-pill" />}
+            <MessageCircle size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'comment' && (
+            <div className="ziro-tooltip">
+              <span>Comment</span>
+              <kbd>C</kbd>
             </div>
           )}
         </div>
 
         <div className="ziro-group-divider" />
 
-        {/* 10. Eraser Tool (E) */}
+        {/* 11. Eraser Tool (E) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('eraser')}
@@ -385,6 +546,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setActiveTool('eraser');
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowFramesMenu(false);
             }}
             aria-label="Eraser (E)"
           >
@@ -396,6 +558,62 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               <span>Eraser</span>
               <kbd>E</kbd>
             </div>
+          )}
+        </div>
+
+        {/* 12. More Tools / Apps (>> / ...) */}
+        <div
+          className="ziro-tool-item relative"
+          onMouseEnter={() => setHoveredTool('more')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className="ziro-tool-btn"
+            onClick={() => {
+              setShowMoreMenu((prev) => !prev);
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+              setShowFramesMenu(false);
+            }}
+            aria-label="More tools"
+          >
+            <MoreHorizontal size={20} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'more' && !showMoreMenu && (
+            <div className="ziro-tooltip">
+              <span>More Apps</span>
+            </div>
+          )}
+
+          {showMoreMenu && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowMoreMenu(false)} />
+              <div className="ziro-flyout-card" style={{ width: '220px' }}>
+                <div className="ziro-flyout-title">ZIRO APPS & TOOLS</div>
+                <div className="ziro-frames-menu">
+                  <button
+                    className="ziro-frame-menu-btn"
+                    onClick={() => {
+                      onOpenTemplates();
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    <LayoutGrid size={16} />
+                    <span>Template Library</span>
+                  </button>
+                  <button
+                    className="ziro-frame-menu-btn"
+                    onClick={() => {
+                      onOpenShortcuts?.();
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    <Type size={16} />
+                    <span>Keyboard Shortcuts</span>
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </nav>

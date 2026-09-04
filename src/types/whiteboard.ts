@@ -5,22 +5,34 @@ export type ToolType =
   | 'text'
   | 'sticky'
   | 'rectangle'
+  | 'rounded_rectangle'
   | 'circle'
   | 'diamond'
+  | 'triangle'
+  | 'star'
+  | 'cloud'
+  | 'speech_bubble'
   | 'arrow'
   | 'draw'
   | 'frame'
+  | 'comment'
   | 'eraser';
 
 export type ElementType =
   | 'sticky'
   | 'rectangle'
+  | 'rounded_rectangle'
   | 'circle'
   | 'diamond'
+  | 'triangle'
+  | 'star'
+  | 'cloud'
+  | 'speech_bubble'
   | 'arrow'
   | 'draw'
   | 'text'
-  | 'frame';
+  | 'frame'
+  | 'comment';
 
 export type StickyColor =
   | 'yellow'
@@ -61,7 +73,7 @@ export interface StickyElement extends BaseElement {
 }
 
 export interface ShapeElementData extends BaseElement {
-  type: 'rectangle' | 'circle' | 'diamond';
+  type: 'rectangle' | 'rounded_rectangle' | 'circle' | 'diamond' | 'triangle' | 'star' | 'cloud' | 'speech_bubble';
   fill: string;
   stroke: string;
   strokeWidth: number;
@@ -78,6 +90,22 @@ export interface FrameElementData extends BaseElement {
   title: string;
   fill?: string;
   stroke?: string;
+}
+
+export interface CommentElementData extends BaseElement {
+  type: 'comment';
+  authorName: string;
+  authorAvatarColor: string;
+  text: string;
+  createdAt: number;
+  resolved?: boolean;
+  replies?: {
+    id: string;
+    authorName: string;
+    authorAvatarColor: string;
+    text: string;
+    createdAt: number;
+  }[];
 }
 
 export interface ArrowElementData extends BaseElement {
@@ -115,6 +143,7 @@ export type CanvasElement =
   | StickyElement
   | ShapeElementData
   | FrameElementData
+  | CommentElementData
   | ArrowElementData
   | DrawElementData
   | TextElementData;

@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import {
   Undo2,
   Redo2,
@@ -70,7 +71,25 @@ export const TopNav: React.FC<TopNavProps> = ({
   const [isStarred, setIsStarred] = useState(metadata.isStarred || false);
   const [showShareToast, setShowShareToast] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
+  const [showTimer, setShowTimer] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(300);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning && timerSeconds > 0) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    } else if (timerSeconds === 0 && isTimerRunning) {
+      setIsTimerRunning(false);
+      confetti({ particleCount: 50, spread: 80, origin: { y: 0.3 } });
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning, timerSeconds]);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -312,11 +331,18 @@ export const TopNav: React.FC<TopNavProps> = ({
             <>
               <div className="flyout-backdrop" onClick={() => setShowReactions(false)} />
               <div className="ziro-reactions-popover">
-                {['👍', '❤️', '🔥', '🎉', '💡', '🚀', '👏'].map((emoji) => (
+                {['👍', '❤️', '🔥', '🎉', '💡', '🚀', '👏', '💯'].map((emoji) => (
                   <button
                     key={emoji}
                     className="ziro-emoji-btn"
-                    onClick={() => setShowReactions(false)}
+                    onClick={() => {
+                      setShowReactions(false);
+                      confetti({
+                        particleCount: 30,
+                        spread: 70,
+                        origin: { y: 0.2, x: 0.75 },
+                      });
+                    }}
                   >
                     {emoji}
                   </button>
@@ -327,9 +353,52 @@ export const TopNav: React.FC<TopNavProps> = ({
         </div>
 
         {/* Timer Widget */}
-        <button className="ziro-top-icon-btn" title="Timer widget">
-          <Timer size={16} strokeWidth={2} />
-        </button>
+        <div className="relative">
+          <button
+            className={`ziro-top-icon-btn ${showTimer ? 'active' : ''}`}
+            onClick={() => setShowTimer((prev) => !prev)}
+            title="Meeting Timer & Stopwatch"
+          >
+            <Timer size={16} strokeWidth={2} />
+          </button>
+
+          {showTimer && (
+            <>
+              <div className="flyout-backdrop" onClick={() => setShowTimer(false)} />
+              <div className="ziro-timer-card">
+                <div className="ziro-timer-title">MEETING TIMER</div>
+                <div className="ziro-timer-display">
+                  {Math.floor(timerSeconds / 60)
+                    .toString()
+                    .padStart(2, '0')}
+                  :{(timerSeconds % 60).toString().padStart(2, '0')}
+                </div>
+                <div className="ziro-timer-presets">
+                  <button onClick={() => setTimerSeconds(60)}>+1m</button>
+                  <button onClick={() => setTimerSeconds(300)}>+5m</button>
+                  <button onClick={() => setTimerSeconds(600)}>+10m</button>
+                </div>
+                <div className="ziro-timer-actions">
+                  <button
+                    className="ziro-timer-start-btn"
+                    onClick={() => setIsTimerRunning((r) => !r)}
+                  >
+                    {isTimerRunning ? 'Pause' : 'Start'}
+                  </button>
+                  <button
+                    className="ziro-timer-reset-btn"
+                    onClick={() => {
+                      setIsTimerRunning(false);
+                      setTimerSeconds(300);
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Presentation Mode Button */}
         <button

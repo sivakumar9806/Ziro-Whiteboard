@@ -144,8 +144,19 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       return;
     }
 
-    // 5. Shape creation tools (Rectangle, Circle, Diamond, Frame)
-    if (activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'diamond' || activeTool === 'frame') {
+    // 5. Shape creation tools (Rectangle, Rounded Rect, Circle, Diamond, Triangle, Star, Cloud, Speech Bubble, Frame)
+    const shapeToolTypes = [
+      'rectangle',
+      'rounded_rectangle',
+      'circle',
+      'diamond',
+      'triangle',
+      'star',
+      'cloud',
+      'speech_bubble',
+      'frame',
+    ];
+    if (shapeToolTypes.includes(activeTool)) {
       setInteractionMode('creating_shape');
       setCreationStart(worldPt);
       setCreationCurrent(worldPt);
@@ -153,7 +164,29 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       return;
     }
 
-    // 6. Sticky Note Quick Click Creation
+    // 6. Comment Pin Creation
+    if (activeTool === 'comment') {
+      const newCommentId = `comment-${Date.now()}`;
+      const newComment: CanvasElement = {
+        id: newCommentId,
+        type: 'comment',
+        x: worldPt.x,
+        y: worldPt.y,
+        width: 36,
+        height: 36,
+        authorName: 'You',
+        authorAvatarColor: '#4262ff',
+        text: '',
+        createdAt: Date.now(),
+        zIndex: elements.length + 10,
+      };
+      setElements((prev) => [...prev, newComment]);
+      setSelectedIds([newCommentId]);
+      setActiveTool('select');
+      return;
+    }
+
+    // 7. Sticky Note Quick Click Creation
     if (activeTool === 'sticky') {
       const newStickyId = `sticky-${Date.now()}`;
       const newSticky: CanvasElement = {
@@ -176,7 +209,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       return;
     }
 
-    // 7. Text Quick Click Creation
+    // 8. Text Quick Click Creation
     if (activeTool === 'text') {
       const newTextId = `text-${Date.now()}`;
       const newText: CanvasElement = {
@@ -199,7 +232,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       return;
     }
 
-    // 8. Select Tool: Hit testing
+    // 9. Select Tool: Hit testing
     if (activeTool === 'select') {
       const hitElement = [...elements].reverse().find((el) => isPointInElement(worldPt, el));
 
@@ -260,8 +293,30 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       const dy = worldPt.y - dragStartPoint.y;
 
       setElementsTransient(() => {
+        // Collect all IDs to move: selected IDs plus elements inside selected frames
+        const selectedFrames = initialElementsSnapshot.filter(
+          (el) => el.type === 'frame' && selectedIds.includes(el.id)
+        );
+        const nestedIds = new Set<string>();
+        selectedFrames.forEach((frame) => {
+          initialElementsSnapshot.forEach((child) => {
+            if (child.id !== frame.id && child.type !== 'frame') {
+              if (
+                child.x >= frame.x &&
+                child.y >= frame.y &&
+                child.x + child.width <= frame.x + frame.width &&
+                child.y + child.height <= frame.y + frame.height
+              ) {
+                nestedIds.add(child.id);
+              }
+            }
+          });
+        });
+
+        const allMovingIds = new Set([...selectedIds, ...nestedIds]);
+
         return initialElementsSnapshot.map((el) => {
-          if (selectedIds.includes(el.id)) {
+          if (allMovingIds.has(el.id)) {
             if (el.type === 'arrow') {
               return {
                 ...el,
@@ -424,7 +479,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         setElements((prev) => [newFrame, ...prev]);
         setSelectedIds([newFrameId]);
       } else {
-        const shapeType = activeTool === 'circle' ? 'circle' : activeTool === 'diamond' ? 'diamond' : 'rectangle';
+        const shapeType = (activeTool as any) || 'rectangle';
         const newShapeId = `shape-${Date.now()}`;
         const newShape: CanvasElement = {
           id: newShapeId,
@@ -437,7 +492,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           stroke: activeStrokeColor || '#4262ff',
           strokeWidth: activeStrokeWidth || 2,
           strokeStyle: 'solid',
-          borderRadius: shapeType === 'rectangle' ? 12 : undefined,
+          borderRadius: shapeType === 'rounded_rectangle' ? 16 : shapeType === 'rectangle' ? 6 : undefined,
           text: '',
           fontSize: 15,
           fontColor: '#1e293b',
@@ -556,6 +611,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             element={element}
             isSelected={selectedIds.includes(element.id)}
             onUpdate={handleUpdateElement}
+            onDelete={(id) => {
+              setElements((prev) => prev.filter((el) => el.id !== id));
+              setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
+            }}
             isEditingDirectly={editingElementId === element.id}
             onStartEditing={() => setEditingElementId(element.id)}
             onFinishEditing={() => setEditingElementId(null)}
