@@ -42,8 +42,8 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
     };
   }, []);
 
-  // 1. Playback Engine (Real Audio Blob or Speech Synthesis)
-  const handleTogglePlay = (e: React.MouseEvent) => {
+  // 1. Playback Engine (Real Audio Blob or Speech Synthesis + Audio Chime)
+  const handleTogglePlay = (e: React.MouseEvent | React.PointerEvent) => {
     e.stopPropagation();
 
     if (isPlaying) {
@@ -62,6 +62,31 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
     setIsPlaying(true);
     setProgress(0);
 
+    // Play pleasant audible chime immediately
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      }
+    } catch {
+      // safe
+    }
+
     // If we have a recorded audio blob URL, play it
     if (element.audioBlobUrl) {
       const audio = new Audio(element.audioBlobUrl);
@@ -79,62 +104,66 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
       };
 
       audio.play().catch(() => {
-        // Fallback to speech synthesis if autoplay blocked
         speakVoiceNote();
       });
     } else {
-      // Speak the voice note aloud with SpeechSynthesis
       speakVoiceNote();
     }
   };
 
   const speakVoiceNote = () => {
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      try {
+        window.speechSynthesis.cancel();
+        const textToSpeak = `${element.title || 'Voice Note'}. By ${element.authorName || 'Team Member'}: This whiteboard note is approved!`;
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
 
-      const textToSpeak = `${element.title || 'Team Voice Memo'}. Note by ${element.authorName || 'Team Member'}: Everything on this whiteboard section is approved and ready for next steps.`;
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.05;
+        const durationEstimate = 4;
+        let elapsed = 0;
+        const progressInterval = setInterval(() => {
+          elapsed += 0.1;
+          setProgress(Math.min(95, (elapsed / durationEstimate) * 100));
+        }, 100);
 
-      const durationEstimate = 6;
-      let elapsed = 0;
-      const progressInterval = setInterval(() => {
-        elapsed += 0.1;
-        setProgress(Math.min(95, (elapsed / durationEstimate) * 100));
-      }, 100);
+        utterance.onend = () => {
+          clearInterval(progressInterval);
+          setIsPlaying(false);
+          setProgress(100);
+          setTimeout(() => setProgress(0), 400);
+        };
 
-      utterance.onend = () => {
-        clearInterval(progressInterval);
-        setIsPlaying(false);
-        setProgress(100);
-        setTimeout(() => setProgress(0), 400);
-      };
-
-      utterance.onerror = () => {
-        clearInterval(progressInterval);
-        setIsPlaying(false);
-        setProgress(0);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    } else {
-      // Progress simulation fallback
-      let p = 0;
-      const interval = setInterval(() => {
-        p += 5;
-        setProgress(p);
-        if (p >= 100) {
-          clearInterval(interval);
+        utterance.onerror = () => {
+          clearInterval(progressInterval);
           setIsPlaying(false);
           setProgress(0);
-        }
-      }, 150);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch {
+        simulateProgress();
+      }
+    } else {
+      simulateProgress();
     }
   };
 
+  const simulateProgress = () => {
+    let p = 0;
+    const interval = setInterval(() => {
+      p += 5;
+      setProgress(p);
+      if (p >= 100) {
+        clearInterval(interval);
+        setIsPlaying(false);
+        setProgress(0);
+      }
+    }, 150);
+  };
+
   // 2. Real Microphone Recording Engine
-  const handleToggleRecord = async (e: React.MouseEvent) => {
+  const handleToggleRecord = async (e: React.MouseEvent | React.PointerEvent) => {
     e.stopPropagation();
 
     if (isRecording) {
@@ -177,7 +206,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         setRecordSeconds((s) => s + 1);
       }, 1000);
     } catch {
-      alert('Microphone permission was not granted. You can still use the Play button to hear spoken voice notes!');
+      alert('Microphone permission was not granted. Click Play to hear synthesized voice notes!');
     }
   };
 
@@ -212,6 +241,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
               onBlur={handleTitleBlur}
               onKeyDown={(e) => e.key === 'Enter' && handleTitleBlur()}
               onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               autoFocus
             />
           ) : (
@@ -232,6 +262,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
             type="button"
             className="audio-delete-btn"
             onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onDelete?.(element.id);
@@ -249,7 +280,11 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         <button
           type="button"
           className={`audio-memo-play-btn ${isPlaying ? 'playing' : ''}`}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            handleTogglePlay(e);
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={handleTogglePlay}
           title={isPlaying ? 'Pause voice memo' : 'Play voice memo aloud'}
           disabled={isRecording}
@@ -278,7 +313,11 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         <button
           type="button"
           className={`audio-memo-record-btn ${isRecording ? 'recording' : ''}`}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            handleToggleRecord(e);
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={handleToggleRecord}
           title={isRecording ? 'Stop recording voice' : 'Record voice with microphone'}
         >
