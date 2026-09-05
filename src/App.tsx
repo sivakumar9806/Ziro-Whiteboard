@@ -155,7 +155,15 @@ export const App: React.FC = () => {
   const handleInsertBatchElements = useCallback((newElements: CanvasElement[]) => {
     setElements((prev) => [...prev, ...newElements]);
     setSelectedIds(newElements.map((el) => el.id));
-  }, [setElements, setSelectedIds]);
+
+    // Smoothly focus viewport onto the generated elements
+    const rect = document.querySelector('.whiteboard-canvas-viewport')?.getBoundingClientRect();
+    if (rect && newElements.length > 0) {
+      setTimeout(() => {
+        fitToElements(newElements, rect);
+      }, 50);
+    }
+  }, [setElements, setSelectedIds, fitToElements]);
 
   // Insert interactive Voice Memo Audio Pin
   const handleAddVoiceMemo = useCallback(() => {

@@ -617,114 +617,254 @@ export const AIStudioModal: React.FC<AIStudioModalProps> = ({
     setIsGenerating(true);
 
     setTimeout(() => {
-      // Generate dynamically based on prompt words
       const now = Date.now();
-      const frame: CanvasElement = {
-        id: `ai-custom-frame-${now}`,
-        type: 'frame',
-        x: centerX - 360,
-        y: centerY - 200,
-        width: 720,
-        height: 400,
-        title: `🤖 AI Flow: "${prompt.slice(0, 35)}..."`,
-        fill: 'rgba(240, 245, 255, 0.5)',
-        stroke: '#4262ff',
-        zIndex: 1,
-      };
+      const lower = prompt.toLowerCase();
+      let generated: CanvasElement[] = [];
 
-      const nodes: CanvasElement[] = [
-        {
-          id: `ai-cn1-${now}`,
-          type: 'rounded_rectangle',
-          x: centerX - 320,
-          y: centerY - 40,
-          width: 180,
-          height: 80,
-          fill: '#eff6ff',
-          stroke: '#3b82f6',
-          strokeWidth: 2,
+      // 1. Specific shape / element requests
+      if (lower.includes('round') || lower.includes('box') || lower.includes('rectangle')) {
+        generated = [
+          {
+            id: `ai-rnd-${now}`,
+            type: 'rounded_rectangle',
+            x: centerX - 120,
+            y: centerY - 60,
+            width: 240,
+            height: 120,
+            fill: '#eff6ff',
+            stroke: '#3b82f6',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: `✨ ${prompt}`,
+            fontSize: 14,
+            fontColor: '#1e3a8a',
+            zIndex: 2,
+          },
+        ];
+      } else if (lower.includes('circle') || lower.includes('oval')) {
+        generated = [
+          {
+            id: `ai-circ-${now}`,
+            type: 'circle',
+            x: centerX - 80,
+            y: centerY - 80,
+            width: 160,
+            height: 160,
+            fill: '#f0fdf4',
+            stroke: '#22c55e',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: `🎯 ${prompt}`,
+            fontSize: 14,
+            fontColor: '#14532d',
+            zIndex: 2,
+          },
+        ];
+      } else if (lower.includes('sticky') || lower.includes('note')) {
+        generated = [
+          {
+            id: `ai-stk-${now}`,
+            type: 'sticky',
+            x: centerX - 100,
+            y: centerY - 90,
+            width: 200,
+            height: 180,
+            colorTheme: 'yellow',
+            text: `💡 ${prompt}`,
+            fontSize: 14,
+            textAlign: 'left',
+            zIndex: 2,
+          },
+        ];
+      } else if (lower.includes('diamond') || lower.includes('decision')) {
+        generated = [
+          {
+            id: `ai-dia-${now}`,
+            type: 'diamond',
+            x: centerX - 80,
+            y: centerY - 70,
+            width: 160,
+            height: 140,
+            fill: '#fef3c7',
+            stroke: '#f59e0b',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: `❓ ${prompt}`,
+            fontSize: 13,
+            fontColor: '#78350f',
+            zIndex: 2,
+          },
+        ];
+      } else if (lower.includes('mindmap') || lower.includes('concept') || lower.includes('ideas')) {
+        // Radial mindmap
+        const centerNode: CanvasElement = {
+          id: `ai-mm-c-${now}`,
+          type: 'circle',
+          x: centerX - 80,
+          y: centerY - 50,
+          width: 160,
+          height: 100,
+          fill: '#4262ff',
+          stroke: '#1e3a8a',
+          strokeWidth: 3,
           strokeStyle: 'solid',
-          text: `📥 Input / Trigger\n(${prompt.slice(0, 24)})`,
-          fontSize: 13,
-          fontColor: '#1e3a8a',
-          zIndex: 2,
-        },
-        {
-          id: `ai-cn2-${now}`,
-          type: 'diamond',
-          x: centerX - 70,
-          y: centerY - 55,
-          width: 140,
-          height: 110,
-          fill: '#fef3c7',
-          stroke: '#f59e0b',
-          strokeWidth: 2,
-          strokeStyle: 'solid',
-          text: '⚙️ Process &\nEvaluate Logic',
-          fontSize: 12,
-          fontColor: '#78350f',
-          zIndex: 2,
-        },
-        {
-          id: `ai-cn3-${now}`,
-          type: 'rounded_rectangle',
-          x: centerX + 140,
-          y: centerY - 40,
-          width: 180,
-          height: 80,
-          fill: '#f0fdf4',
-          stroke: '#22c55e',
-          strokeWidth: 2,
-          strokeStyle: 'solid',
-          text: '🎯 Output Goal\n(Action Complete)',
-          fontSize: 13,
-          fontColor: '#14532d',
-          zIndex: 2,
-        },
-      ];
-
-      const arrows: CanvasElement[] = [
-        {
-          id: `ai-ca1-${now}`,
+          text: `🎯 ${prompt.slice(0, 30)}`,
+          fontSize: 14,
+          fontColor: '#ffffff',
+          zIndex: 3,
+        };
+        const branchTitles = ['Strategy & Goals', 'Execution Plan', 'User Experience', 'Key Metrics'];
+        const branchNodes: CanvasElement[] = branchTitles.map((title, i) => {
+          const angles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+          const dist = 200;
+          const bx = centerX + Math.cos(angles[i]) * dist - 80;
+          const by = centerY + Math.sin(angles[i]) * dist - 30;
+          return {
+            id: `ai-mm-b${i}-${now}`,
+            type: 'rounded_rectangle',
+            x: bx,
+            y: by,
+            width: 160,
+            height: 60,
+            fill: '#f8fafc',
+            stroke: '#64748b',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: title,
+            fontSize: 12,
+            fontColor: '#1e293b',
+            zIndex: 2,
+          };
+        });
+        const branchArrows: CanvasElement[] = branchNodes.map((bn, i) => ({
+          id: `ai-mm-a${i}-${now}`,
           type: 'arrow',
-          startX: centerX - 140,
+          startX: centerX,
           startY: centerY,
-          endX: centerX - 70,
-          endY: centerY,
-          x: centerX - 140,
-          y: centerY - 10,
-          width: 70,
-          height: 20,
-          stroke: '#3b82f6',
+          endX: bn.x + 80,
+          endY: bn.y + 30,
+          x: Math.min(centerX, bn.x + 80),
+          y: Math.min(centerY, bn.y + 30),
+          width: Math.abs(centerX - (bn.x + 80)) || 10,
+          height: Math.abs(centerY - (bn.y + 30)) || 10,
+          stroke: '#64748b',
           strokeWidth: 2,
           strokeStyle: 'solid',
           arrowHead: 'end',
-          zIndex: 3,
-        },
-        {
-          id: `ai-ca2-${now}`,
-          type: 'arrow',
-          startX: centerX + 70,
-          startY: centerY,
-          endX: centerX + 140,
-          endY: centerY,
-          x: centerX + 70,
-          y: centerY - 10,
-          width: 70,
-          height: 20,
-          stroke: '#22c55e',
-          strokeWidth: 2,
-          strokeStyle: 'solid',
-          arrowHead: 'end',
-          zIndex: 3,
-        },
-      ];
+          zIndex: 2,
+        }));
+        generated = [centerNode, ...branchNodes, ...branchArrows];
+      } else {
+        // Multi-node connected flow
+        const frame: CanvasElement = {
+          id: `ai-custom-frame-${now}`,
+          type: 'frame',
+          x: centerX - 360,
+          y: centerY - 200,
+          width: 720,
+          height: 400,
+          title: `🤖 AI Flow: "${prompt.slice(0, 35)}"`,
+          fill: 'rgba(240, 245, 255, 0.5)',
+          stroke: '#4262ff',
+          zIndex: 1,
+        };
+
+        const nodes: CanvasElement[] = [
+          {
+            id: `ai-cn1-${now}`,
+            type: 'rounded_rectangle',
+            x: centerX - 320,
+            y: centerY - 40,
+            width: 180,
+            height: 80,
+            fill: '#eff6ff',
+            stroke: '#3b82f6',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: `📥 1. Input / Trigger\n(${prompt.slice(0, 22)})`,
+            fontSize: 13,
+            fontColor: '#1e3a8a',
+            zIndex: 2,
+          },
+          {
+            id: `ai-cn2-${now}`,
+            type: 'diamond',
+            x: centerX - 70,
+            y: centerY - 55,
+            width: 140,
+            height: 110,
+            fill: '#fef3c7',
+            stroke: '#f59e0b',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: '⚙️ 2. Process &\nEvaluate Logic',
+            fontSize: 12,
+            fontColor: '#78350f',
+            zIndex: 2,
+          },
+          {
+            id: `ai-cn3-${now}`,
+            type: 'rounded_rectangle',
+            x: centerX + 140,
+            y: centerY - 40,
+            width: 180,
+            height: 80,
+            fill: '#f0fdf4',
+            stroke: '#22c55e',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            text: '🎯 3. Output Goal\n(Action Complete)',
+            fontSize: 13,
+            fontColor: '#14532d',
+            zIndex: 2,
+          },
+        ];
+
+        const arrows: CanvasElement[] = [
+          {
+            id: `ai-ca1-${now}`,
+            type: 'arrow',
+            startX: centerX - 140,
+            startY: centerY,
+            endX: centerX - 70,
+            endY: centerY,
+            x: centerX - 140,
+            y: centerY - 10,
+            width: 70,
+            height: 20,
+            stroke: '#3b82f6',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            arrowHead: 'end',
+            zIndex: 3,
+          },
+          {
+            id: `ai-ca2-${now}`,
+            type: 'arrow',
+            startX: centerX + 70,
+            startY: centerY,
+            endX: centerX + 140,
+            endY: centerY,
+            x: centerX + 70,
+            y: centerY - 10,
+            width: 70,
+            height: 20,
+            stroke: '#22c55e',
+            strokeWidth: 2,
+            strokeStyle: 'solid',
+            arrowHead: 'end',
+            zIndex: 3,
+          },
+        ];
+
+        generated = [frame, ...nodes, ...arrows];
+      }
 
       setIsGenerating(false);
-      onInsertElements([frame, ...nodes, ...arrows]);
+      onInsertElements(generated);
       confetti({ particleCount: 70, spread: 80, origin: { y: 0.4 } });
       onClose();
-    }, 700);
+    }, 400);
   };
 
   const handleApplyPreset = (preset: AIPreset) => {
