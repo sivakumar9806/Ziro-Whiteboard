@@ -2869,5 +2869,230 @@ iframe#netlify-drawer-root,
   }
 }
 
+/* =========================================================
+   DATA COLLECTION FORMS & MODAL STYLES
+   ========================================================= */
+.data-form-modal-card {
+  max-width: 580px;
+  max-height: 90vh;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle-btn:hover {
+  color: var(--text-main);
+}
+
+.form-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+
+.form-success-banner {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 14px;
+}
+
+.form-tabs-container {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.form-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+
+.form-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.form-tab-btn.active {
+  background: #ffffff;
+  color: var(--miro-blue);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.data-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.star-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-rating-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  transition: transform 0.1s ease;
+}
+
+.star-rating-btn:hover {
+  transform: scale(1.15);
+}
+
+.form-select-input,
+.form-text-input,
+.form-textarea-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: #ffffff;
+  color: var(--text-main);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.form-select-input:focus,
+.form-text-input:focus,
+.form-textarea-input:focus {
+  border-color: var(--miro-blue);
+  box-shadow: 0 0 0 2px rgba(66, 98, 255, 0.15);
+}
+
+.form-author-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-author-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--miro-blue);
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(66, 98, 255, 0.25);
+  transition: all 0.12s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--miro-blue-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #f8fafc;
+  color: var(--text-main);
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+.form-success-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 10px;
+  text-align: center;
+}
+
 
 

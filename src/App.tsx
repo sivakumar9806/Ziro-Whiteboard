@@ -41,10 +41,20 @@ import { BoardsDashboardModal } from './components/UI/BoardsDashboardModal';
 import { AuthModal } from './components/UI/AuthModal';
 import { ShareInviteModal } from './components/UI/ShareInviteModal';
 import { LiveDiscussionPanel } from './components/UI/LiveDiscussionPanel';
+import { DataCollectionModal } from './components/UI/DataCollectionModal';
+import { checkSessionApi } from './services/authService';
 
 export const App: React.FC = () => {
   // 1. Authentication State
   const [currentUser, setCurrentUser] = useState<User>(() => getCurrentUser());
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
+  // Auto-restore session from backend if token exists
+  useEffect(() => {
+    checkSessionApi().then((user) => {
+      if (user) setCurrentUser(user);
+    });
+  }, []);
 
   // 2. Active Board State
   const initialActiveBoard = useRef<BoardRecord>(
@@ -558,6 +568,7 @@ export const App: React.FC = () => {
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenDashboard={() => setIsDashboardOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenFeedback={() => setIsFeedbackOpen(true)}
         currentUser={currentUser}
         collaborators={collaborators}
         isSimulating={isSimulating}
@@ -710,6 +721,13 @@ export const App: React.FC = () => {
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Forms & Data Collection Modal */}
+      <DataCollectionModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        currentUser={currentUser}
       />
     </div>
   );

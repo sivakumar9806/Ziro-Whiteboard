@@ -20,6 +20,7 @@ import {
   Menu,
   MessageSquare,
   Radio,
+  ClipboardList,
 } from 'lucide-react';
 import type { BoardMetadata, User, CollaboratorPresence, RoomInfo } from '../../types/whiteboard';
 
@@ -38,6 +39,7 @@ interface TopNavProps {
   onOpenShortcuts: () => void;
   onOpenDashboard: () => void;
   onOpenAuth: () => void;
+  onOpenFeedback?: () => void;
   currentUser: User;
   collaborators: CollaboratorPresence[];
   isSimulating: boolean;
@@ -65,6 +67,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   onOpenShortcuts,
   onOpenDashboard,
   onOpenAuth,
+  onOpenFeedback,
   currentUser,
   collaborators,
   isSimulating,
@@ -180,6 +183,19 @@ export const TopNav: React.FC<TopNavProps> = ({
                 <div className="dropdown-divider" />
 
                 <button
+                  type="button"
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onOpenFeedback?.();
+                  }}
+                >
+                  <ClipboardList size={15} className="text-blue-500" />
+                  <span>Feedback & Surveys</span>
+                </button>
+
+                <button
+                  type="button"
                   className="dropdown-item"
                   onClick={() => {
                     setShowMainMenu(false);

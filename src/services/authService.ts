@@ -1,4 +1,5 @@
 import type { User } from '../types/whiteboard';
+import { apiRequest, setAuthToken, getAuthToken } from './apiClient';
 
 const USERS_STORAGE_KEY = 'miro_accounts_db_v1';
 const SESSION_STORAGE_KEY = 'miro_active_session_v1';
@@ -54,12 +55,75 @@ export function getCurrentUser(): User {
     if (raw) {
       return JSON.parse(raw);
     }
-    // Default to first demo user
     const defaultUser = DEMO_USERS[0];
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(defaultUser));
     return defaultUser;
   } catch {
     return DEMO_USERS[0];
+  }
+}
+
+export async function loginUserApi(email: string, password?: string): Promise<User> {
+  try {
+    const res = await apiRequest<{ user: User; token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password: password || 'password123' }),
+    });
+
+    if (res.token) {
+      setAuthToken(res.token);
+    }
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.user));
+    return res.user;
+  } catch {
+    // Local fallback
+    return loginUser(email);
+  }
+}
+
+export async function signupUserApi(
+  name: string,
+  email: string,
+  password?: string,
+  roleTitle?: string,
+  avatarColor?: string
+): Promise<User> {
+  try {
+    const res = await apiRequest<{ user: User; token: string }>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        email,
+        password: password || 'password123',
+        roleTitle,
+        avatarColor,
+      }),
+    });
+
+    if (res.token) {
+      setAuthToken(res.token);
+    }
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.user));
+    return res.user;
+  } catch {
+    // Local fallback
+    return signupUser(name, email);
+  }
+}
+
+export async function checkSessionApi(): Promise<User | null> {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  try {
+    const res = await apiRequest<{ user: User }>('/auth/me');
+    if (res.user) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.user));
+      return res.user;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -108,6 +172,7 @@ export function signupUser(name: string, email: string): User {
 }
 
 export function logoutUser(): User {
+  setAuthToken(null);
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(GUEST_USER));
   return GUEST_USER;
 }
