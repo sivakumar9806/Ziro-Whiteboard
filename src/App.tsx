@@ -223,6 +223,15 @@ export const App: React.FC = () => {
   // Connect to Live WebRTC Mesh Room on mount or when room changes
   useEffect(() => {
     const roomId = getActiveRoomId();
+    // Reflect active room in URL if not already present
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      if (!currentUrl.searchParams.get('room')) {
+        currentUrl.searchParams.set('room', roomId);
+        window.history.replaceState({}, '', currentUrl.toString());
+      }
+    }
+
     realtimeService.joinRoom(roomId, currentUser);
 
     const unsubscribeStatus = realtimeService.subscribeRoomStatus((info) => {
@@ -654,18 +663,8 @@ export const App: React.FC = () => {
         isSimulating={isSimulating}
         onToggleSimulation={handleToggleSimulation}
         saveStatus={saveStatus}
-        onOpenShareModal={() => {
-          if (isGuest) {
-            setIsAuthOpen(true);
-            return;
-          }
-          setIsShareModalOpen(true);
-        }}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
         onToggleDiscussion={() => {
-          if (isGuest) {
-            setIsAuthOpen(true);
-            return;
-          }
           setIsDiscussionOpen((prev) => !prev);
           setUnreadCount(0);
         }}

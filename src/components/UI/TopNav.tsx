@@ -309,18 +309,8 @@ export const TopNav: React.FC<TopNavProps> = ({
           {/* Live WebRTC Room Badge */}
           <button
             className="ziro-room-status-badge"
-            onClick={() => {
-              if (currentUser.id === 'user-guest') {
-                onOpenAuth();
-                return;
-              }
-              onOpenShareModal();
-            }}
-            title={
-              currentUser.id === 'user-guest'
-                ? 'Sign in to generate and share live rooms'
-                : 'Click to view live room & invite link'
-            }
+            onClick={onOpenShareModal}
+            title="Click to view live room & invite link"
           >
             <Radio size={12} className="text-emerald-500 animate-pulse" />
             <span className="ziro-room-name-text">Room: {roomInfo.roomId || 'main'}</span>

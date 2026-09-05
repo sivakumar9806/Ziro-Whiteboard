@@ -9,6 +9,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Sparkles,
+  MessageCircle,
+  Mail,
 } from 'lucide-react';
 import type { CollaboratorPresence, User, RoomInfo } from '../../types/whiteboard';
 
@@ -37,12 +39,31 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  // Construct absolute shareable URL with room parameter
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ziroboard.netlify.app';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  const currentRoomId = roomInfo.roomId || 'main';
+  const shareableUrl = `${origin}${pathname}?room=${currentRoomId}`;
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(currentUrl);
+    navigator.clipboard.writeText(shareableUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = encodeURIComponent(
+      `👋 Join my live Ziro Whiteboard session: "${boardTitle}"! Click to edit with me in real-time: ${shareableUrl}`
+    );
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  const handleShareEmail = () => {
+    const subject = encodeURIComponent(`Invitation to collaborate on "${boardTitle}" - Ziro Whiteboard`);
+    const body = encodeURIComponent(
+      `Hi,\n\nI invite you to collaborate with me on Ziro Whiteboard in real-time.\n\n👉 Join the live session here:\n${shareableUrl}\n\nSee you on the board!`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
   };
 
   const handleJoinCustomRoom = (e: React.FormEvent) => {
@@ -64,17 +85,17 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
         {/* Modal Header */}
         <div className="ziro-share-header">
           <div className="flex items-center gap-3">
-            <div className="ziro-share-icon-wrap">
-              <Users size={20} className="text-blue-600" />
+            <div className="ziro-share-icon-wrap" style={{ background: 'linear-gradient(135deg, #4262ff 0%, #3b82f6 100%)', color: '#fff' }}>
+              <Users size={20} />
             </div>
             <div>
-              <h2 className="ziro-share-title">Invite & Collaborate</h2>
+              <h2 className="ziro-share-title">Invite Colleague & Collaborate Live</h2>
               <p className="ziro-share-subtitle">
-                Share <strong className="text-slate-800 font-semibold">{boardTitle}</strong> with your team
+                Share <strong className="text-slate-800 font-semibold">{boardTitle}</strong> for instant multi-user editing
               </p>
             </div>
           </div>
-          <button className="ziro-modal-close-btn" onClick={onClose}>
+          <button className="ziro-modal-close-btn" onClick={onClose} title="Close">
             <X size={18} />
           </button>
         </div>
@@ -84,32 +105,33 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
           <div className="flex items-center gap-2">
             <Radio size={16} className="text-emerald-500 animate-pulse" />
             <span className="font-semibold text-xs text-slate-800">
-              Live Multi-User Mesh Active
+              {roomInfo.isHost ? '👑 You are Hosting this Session' : '🌐 Connected to Live Mesh'}
             </span>
           </div>
           <div className="ziro-badge-online">
             <span className="ziro-green-dot" />
-            <span>{activeParticipantsCount} {activeParticipantsCount === 1 ? 'person' : 'people'} in room</span>
+            <span>{activeParticipantsCount} {activeParticipantsCount === 1 ? 'person active' : 'people collaborating'}</span>
           </div>
         </div>
 
         {/* Link Copy Box */}
         <div className="ziro-share-section">
           <label className="ziro-share-label">
-            <Globe size={14} className="text-slate-500" />
-            <span>Board Share Link (10+ users can edit concurrently)</span>
+            <Globe size={14} className="text-blue-600" />
+            <span>Live Collab Invitation Link</span>
           </label>
           <div className="ziro-copy-input-group">
             <input
               type="text"
               readOnly
-              value={currentUrl}
-              className="ziro-share-url-input"
+              value={shareableUrl}
+              className="ziro-share-url-input font-mono text-[12px]"
               onClick={(e) => (e.target as HTMLInputElement).select()}
             />
             <button
               className={`ziro-copy-btn ${copied ? 'copied' : ''}`}
               onClick={handleCopyLink}
+              title="Copy link to clipboard"
             >
               {copied ? (
                 <>
@@ -124,9 +146,30 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
               )}
             </button>
           </div>
-          <div className="flex items-center gap-2 mt-2 text-[12px] text-slate-500">
-            <ShieldCheck size={14} className="text-emerald-500" />
-            <span>Anyone with this link can join, draw, chat, and edit in real time.</span>
+
+          {/* 1-Click Fast Social Sharing */}
+          <div className="flex items-center gap-2 mt-3">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+              onClick={handleShareWhatsApp}
+            >
+              <MessageCircle size={14} />
+              <span>Share to WhatsApp</span>
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+              onClick={handleShareEmail}
+            >
+              <Mail size={14} />
+              <span>Send Email Invite</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-500">
+            <ShieldCheck size={13} className="text-emerald-500" />
+            <span>When your colleague opens this link, both of you can draw, move shapes, add sticky notes, and voice chat concurrently.</span>
           </div>
         </div>
 
@@ -135,9 +178,9 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
           <div className="flex items-center justify-between mb-2">
             <label className="ziro-share-label">
               <Users size={14} className="text-slate-500" />
-              <span>Current Collaborators ({activeParticipantsCount})</span>
+              <span>Active in Room ({activeParticipantsCount})</span>
             </label>
-            <span className="text-[11px] text-slate-400">WebRTC Live Synced</span>
+            <span className="text-[11px] text-slate-400">WebRTC P2P Sync Active</span>
           </div>
 
           <div className="ziro-collaborators-list">
@@ -153,9 +196,9 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
                 <div className="text-xs font-semibold text-slate-800 truncate">
                   {currentUser.name} <span className="text-blue-600 font-medium">(You)</span>
                 </div>
-                <div className="text-[11px] text-slate-400">{currentUser.email}</div>
+                <div className="text-[11px] text-slate-400">{currentUser.email || 'Host'}</div>
               </div>
-              <span className="ziro-pill-role">Host / Active</span>
+              <span className="ziro-pill-role">{roomInfo.isHost ? 'Host' : 'Active'}</span>
             </div>
 
             {/* Remote Peers */}
@@ -171,7 +214,7 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
                   <div className="text-xs font-semibold text-slate-800 truncate">
                     {c.user.name}
                   </div>
-                  <div className="text-[11px] text-slate-400">Connected peer</div>
+                  <div className="text-[11px] text-slate-400">Collaborator (Live)</div>
                 </div>
                 <span className="ziro-pill-online">
                   <span className="ziro-green-dot" /> Online
@@ -185,12 +228,12 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
         <div className="ziro-share-section ziro-switch-room-box">
           <label className="ziro-share-label">
             <Sparkles size={14} className="text-amber-500" />
-            <span>Join or Create Team Room Code</span>
+            <span>Join or Switch to a Different Room Code</span>
           </label>
           <form onSubmit={handleJoinCustomRoom} className="flex gap-2">
             <input
               type="text"
-              placeholder={`e.g. sprint-${Math.floor(100 + Math.random() * 900)}`}
+              placeholder="e.g. project-design-room"
               value={customRoomInput}
               onChange={(e) => setCustomRoomInput(e.target.value)}
               className="ziro-custom-room-input"
@@ -205,7 +248,7 @@ export const ShareInviteModal: React.FC<ShareInviteModalProps> = ({
             </button>
           </form>
           <div className="text-[11px] text-slate-400 mt-1">
-            Current Room: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-mono">{roomInfo.roomId || 'main-room'}</code>
+            Current Room: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-blue-600 font-mono font-semibold">{currentRoomId}</code>
           </div>
         </div>
 

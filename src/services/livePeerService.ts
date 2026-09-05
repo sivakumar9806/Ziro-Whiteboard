@@ -16,11 +16,14 @@ export type VoiceStreamCallback = (peerId: string, stream: MediaStream) => void;
 
 class LivePeerService {
   private peer: Peer | null = null;
-  private peerId: string = '';
+  public peerId: string = '';
   public clientId: string = `u-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
-  private currentRoomId: string = '';
+  public currentRoomId: string = '';
+  public currentUser: User | null = null;
   private isConnected: boolean = false;
   private isHost: boolean = false;
+  private isRetryingAsPeer: boolean = false;
+  
   private dataConnections: Map<string, DataConnection> = new Map();
   private mediaCalls: Map<string, MediaConnection> = new Map();
   private messageListeners: Set<MessageCallback> = new Set();
@@ -63,21 +66,27 @@ class LivePeerService {
    */
   public joinRoom(roomId: string, user: User) {
     if (!roomId) return;
-    if (this.currentRoomId === roomId && this.isConnected) return;
+    const cleanRoom = roomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    if (this.currentRoomId === cleanRoom && this.isConnected) return;
 
     this.leaveRoom();
-    this.currentRoomId = roomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-    this.initPeer(user);
+    this.currentRoomId = cleanRoom;
+    this.currentUser = user;
+    this.isRetryingAsPeer = false;
+
+    // Try joining first as Room Anchor / Host Coordinator
+    this.attemptJoinAsHost(cleanRoom);
   }
 
-  private initPeer(user: User) {
-    const cleanRoom = this.currentRoomId;
-    const cleanUser = user.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'user';
-    const targetPeerId = `ziro-${cleanRoom}-${cleanUser}-${this.clientId}`;
-    this.peerId = targetPeerId;
+  /**
+   * Attempt to register as the room anchor host
+   */
+  private attemptJoinAsHost(cleanRoom: string) {
+    const anchorId = `ziro-room-${cleanRoom}-host`;
+    console.log(`📡 [Ziro Collab] Attempting to host room: ${anchorId}`);
 
     try {
-      this.peer = new Peer(targetPeerId, {
+      this.peer = new Peer(anchorId, {
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -90,13 +99,75 @@ class LivePeerService {
       });
 
       this.peer.on('open', (id) => {
+        console.log(`👑 [Ziro Collab] Successfully registered as Room Anchor Host: ${id}`);
         this.peerId = id;
         this.isConnected = true;
+        this.isHost = true;
         this.updateRoomStatus();
-
-        // Connect to anchor room coordinator
-        this.connectToAnchor(cleanRoom);
         this.startHeartbeat();
+      });
+
+      this.peer.on('connection', (conn) => {
+        console.log(`🤝 [Ziro Collab] Incoming connection from peer: ${conn.peer}`);
+        this.setupDataConnection(conn);
+      });
+
+      this.peer.on('call', (mediaCall) => {
+        this.setupMediaCall(mediaCall);
+      });
+
+      this.peer.on('error', (err: any) => {
+        console.log(`ℹ️ [Ziro Collab] Host registration notice:`, err?.type || err?.message);
+        
+        // If anchor ID is unavailable (someone is already hosting), connect as a Peer!
+        if ((err.type === 'unavailable-id' || err.message?.includes('ID')) && !this.isRetryingAsPeer) {
+          this.isRetryingAsPeer = true;
+          this.destroyCurrentPeer();
+          this.joinAsPeer(cleanRoom);
+        }
+      });
+
+      this.peer.on('close', () => {
+        this.isConnected = false;
+        this.updateRoomStatus();
+      });
+    } catch (err) {
+      console.warn('[Ziro Collab] Host attempt failed, switching to peer:', err);
+      this.joinAsPeer(cleanRoom);
+    }
+  }
+
+  /**
+   * Join as a guest peer and connect to the room host
+   */
+  private joinAsPeer(cleanRoom: string) {
+    const peerUniqueId = `ziro-room-${cleanRoom}-peer-${this.clientId}`;
+    const anchorId = `ziro-room-${cleanRoom}-host`;
+    console.log(`🌐 [Ziro Collab] Connecting as peer: ${peerUniqueId} ➔ Host: ${anchorId}`);
+
+    try {
+      this.peer = new Peer(peerUniqueId, {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' },
+          ],
+        },
+        debug: 1,
+      });
+
+      this.peer.on('open', (id) => {
+        console.log(`✅ [Ziro Collab] Peer registered: ${id}. Now connecting to host...`);
+        this.peerId = id;
+        this.isConnected = true;
+        this.isHost = false;
+        this.updateRoomStatus();
+        this.startHeartbeat();
+
+        // Connect directly to the Host Anchor
+        this.connectToPeer(anchorId);
       });
 
       this.peer.on('connection', (conn) => {
@@ -108,12 +179,7 @@ class LivePeerService {
       });
 
       this.peer.on('error', (err: any) => {
-        console.warn('[Ziro Collab] Peer event info:', err?.type || err?.message);
-        if (err.type === 'unavailable-id') {
-          // If anchor ID taken, retry as standard peer
-          const fallbackId = `ziro-${cleanRoom}-peer-${this.clientId}`;
-          this.peerId = fallbackId;
-        }
+        console.warn('[Ziro Collab] Peer event warning:', err?.type || err?.message);
       });
 
       this.peer.on('close', () => {
@@ -121,75 +187,40 @@ class LivePeerService {
         this.updateRoomStatus();
       });
     } catch (err) {
-      console.error('[Ziro Collab] PeerJS initialization failed:', err);
+      console.error('[Ziro Collab] Failed to join as peer:', err);
     }
   }
 
-  private connectToAnchor(roomName: string) {
-    // Try to connect to room anchor
-    const anchorId = `ziro-${roomName}-anchor`;
-    if (this.peerId === anchorId) {
-      this.isHost = true;
-      this.updateRoomStatus();
-      return;
-    }
+  private connectToPeer(targetPeerId: string) {
+    if (!this.peer || this.dataConnections.has(targetPeerId)) return;
 
-    // Connect to the anchor node
     try {
-      const conn = this.peer?.connect(anchorId, { reliable: true });
+      console.log(`🔗 [Ziro Collab] Connecting to peer: ${targetPeerId}`);
+      const conn = this.peer.connect(targetPeerId, { reliable: true });
       if (conn) {
         this.setupDataConnection(conn);
       }
     } catch (err) {
-      console.debug('[Ziro Collab] Anchor connection attempt:', err);
+      console.warn(`[Ziro Collab] Failed to connect to ${targetPeerId}:`, err);
     }
   }
 
   private setupDataConnection(conn: DataConnection) {
     conn.on('open', () => {
+      console.log(`✨ [Ziro Collab] Data connection established with: ${conn.peer}`);
       this.dataConnections.set(conn.peer, conn);
       this.updateRoomStatus();
 
-      // Request latest board state if joining an existing room
-      this.sendToPeer(conn, {
-        type: 'REQUEST_BOARD_STATE',
-        payload: { boardId: this.currentRoomId, requesterId: this.clientId },
-      });
-
-      // Share list of known peers to form a full mesh
-      const peerList = Array.from(this.dataConnections.keys()).filter((p) => p !== conn.peer);
-      if (peerList.length > 0) {
-        conn.send({
-          type: 'PEER_DISCOVERY',
-          peers: peerList,
+      // If we are a guest joining, request the current board state from the host
+      if (!this.isHost) {
+        this.sendToPeer(conn, {
+          type: 'REQUEST_BOARD_STATE',
+          payload: { boardId: this.currentRoomId, requesterId: this.clientId },
         });
-      }
-    });
-
-    conn.on('data', (raw: any) => {
-      if (!raw) return;
-
-      // Internal peer mesh discovery
-      if (raw.type === 'PEER_DISCOVERY' && Array.isArray(raw.peers)) {
-        raw.peers.forEach((otherPeerId: string) => {
-          if (otherPeerId !== this.peerId && !this.dataConnections.has(otherPeerId)) {
-            try {
-              const newConn = this.peer?.connect(otherPeerId, { reliable: true });
-              if (newConn) this.setupDataConnection(newConn);
-            } catch {
-              // Ignore
-            }
-          }
-        });
-        return;
-      }
-
-      const msg = raw as RealtimeMessage;
-
-      // Handle Board State Sync Request
-      if (msg.type === 'REQUEST_BOARD_STATE' && this.latestElementsProvider) {
-        const { elements, metadata } = this.latestElementsProvider();
-        if (elements.length > 0) {
+      } else {
+        // If we are the host, immediately send the current board state to the newcomer!
+        if (this.latestElementsProvider) {
+          const { elements, metadata } = this.latestElementsProvider();
           this.sendToPeer(conn, {
             type: 'SYNC_BOARD_STATE',
             payload: {
@@ -200,12 +231,66 @@ class LivePeerService {
             },
           });
         }
+
+        // Inform other connected peers about the new member to maintain a full mesh
+        const allOtherPeers = Array.from(this.dataConnections.keys()).filter((p) => p !== conn.peer);
+        if (allOtherPeers.length > 0) {
+          conn.send({
+            type: 'PEER_DISCOVERY',
+            peers: allOtherPeers,
+          });
+        }
+      }
+
+      // Broadcast our presence immediately so our cursor appears on their screen
+      if (this.currentUser) {
+        const presence = this.createPresenceObject(
+          this.currentUser,
+          this.currentRoomId,
+          window.innerWidth / 2,
+          window.innerHeight / 2
+        );
+        this.sendToPeer(conn, {
+          type: 'PRESENCE_UPDATE',
+          payload: presence,
+        });
+      }
+    });
+
+    conn.on('data', (raw: any) => {
+      if (!raw) return;
+
+      // Handle mesh peer discovery
+      if (raw.type === 'PEER_DISCOVERY' && Array.isArray(raw.peers)) {
+        raw.peers.forEach((otherPeerId: string) => {
+          if (otherPeerId !== this.peerId && !this.dataConnections.has(otherPeerId)) {
+            this.connectToPeer(otherPeerId);
+          }
+        });
+        return;
+      }
+
+      const msg = raw as RealtimeMessage;
+
+      // Handle Board State Sync Request
+      if (msg.type === 'REQUEST_BOARD_STATE' && this.latestElementsProvider) {
+        const { elements, metadata } = this.latestElementsProvider();
+        this.sendToPeer(conn, {
+          type: 'SYNC_BOARD_STATE',
+          payload: {
+            boardId: this.currentRoomId,
+            elements,
+            metadata,
+            senderId: this.clientId,
+          },
+        });
       }
 
       this.emitMessage(msg);
     });
 
     conn.on('close', () => {
+      console.log(`🔌 [Ziro Collab] Peer disconnected: ${conn.peer}`);
       this.dataConnections.delete(conn.peer);
       this.updateRoomStatus();
     });
@@ -234,7 +319,18 @@ class LivePeerService {
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
     this.heartbeatInterval = setInterval(() => {
       this.updateRoomStatus();
-    }, 5000);
+    }, 4000);
+  }
+
+  private destroyCurrentPeer() {
+    if (this.peer) {
+      try {
+        this.peer.destroy();
+      } catch {
+        // Safe destroy
+      }
+      this.peer = null;
+    }
   }
 
   private updateRoomStatus() {
@@ -287,7 +383,7 @@ class LivePeerService {
       try {
         conn.send(msg);
       } catch (err) {
-        console.warn('[Ziro Collab] Send error:', err);
+        console.warn('[Ziro Collab] Send error to peer:', err);
       }
     }
   }
@@ -301,7 +397,7 @@ class LivePeerService {
       this.sendToPeer(conn, msg);
     });
 
-    // Send to local browser tabs
+    // Send to local browser tabs & windows
     if (this.broadcastChannel) {
       try {
         this.broadcastChannel.postMessage(msg);
@@ -441,10 +537,7 @@ class LivePeerService {
     this.dataConnections.forEach((conn) => conn.close());
     this.dataConnections.clear();
 
-    if (this.peer) {
-      this.peer.destroy();
-      this.peer = null;
-    }
+    this.destroyCurrentPeer();
 
     this.isConnected = false;
     this.currentRoomId = '';
