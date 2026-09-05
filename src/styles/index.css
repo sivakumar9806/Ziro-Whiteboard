@@ -574,10 +574,10 @@ html, body, #root {
    ========================================================= */
 .ziro-toolbar-container {
   position: absolute;
-  top: 50%;
+  top: 72px;
   left: 16px;
-  transform: translateY(-50%);
-  z-index: 1000;
+  transform: none;
+  z-index: 950;
 }
 
 .ziro-toolbar-dock {
@@ -587,8 +587,8 @@ html, body, #root {
   background: #ffffff;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-md);
-  padding: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
 }
 
 .ziro-tool-item {
@@ -599,8 +599,8 @@ html, body, #root {
 
 .ziro-tool-btn {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
