@@ -1858,7 +1858,7 @@ html, body, #root {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   padding: 14px;
-  z-index: 1100;
+  z-index: 2100;
 }
 
 .ziro-timer-title {

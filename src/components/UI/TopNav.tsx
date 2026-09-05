@@ -91,16 +91,20 @@ export const TopNav: React.FC<TopNavProps> = ({
     let interval: any = null;
     if (isTimerRunning && timerSeconds > 0) {
       interval = setInterval(() => {
-        setTimerSeconds((prev) => Math.max(0, prev - 1));
+        setTimerSeconds((prev) => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            confetti({ particleCount: 60, spread: 90, origin: { y: 0.3 } });
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
-    } else if (timerSeconds === 0 && isTimerRunning) {
-      setIsTimerRunning(false);
-      confetti({ particleCount: 50, spread: 80, origin: { y: 0.3 } });
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerRunning, timerSeconds]);
+  }, [isTimerRunning]);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -371,11 +375,16 @@ export const TopNav: React.FC<TopNavProps> = ({
         {/* Timer Widget */}
         <div className="relative">
           <button
-            className={`ziro-top-icon-btn ${showTimer ? 'active' : ''}`}
+            className={`ziro-top-icon-btn ${showTimer ? 'active' : ''} ${isTimerRunning ? 'text-blue-600 bg-blue-50' : ''}`}
             onClick={() => setShowTimer((prev) => !prev)}
             title="Meeting Timer & Stopwatch"
           >
             <Timer size={16} strokeWidth={2} />
+            {isTimerRunning && (
+              <span style={{ fontSize: '11px', fontWeight: 700, marginLeft: '4px', color: '#4262ff' }}>
+                {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+              </span>
+            )}
           </button>
 
           {showTimer && (
@@ -390,18 +399,23 @@ export const TopNav: React.FC<TopNavProps> = ({
                   :{(timerSeconds % 60).toString().padStart(2, '0')}
                 </div>
                 <div className="ziro-timer-presets">
-                  <button onClick={() => setTimerSeconds(60)}>+1m</button>
-                  <button onClick={() => setTimerSeconds(300)}>+5m</button>
-                  <button onClick={() => setTimerSeconds(600)}>+10m</button>
+                  <button type="button" onClick={() => setTimerSeconds((prev) => prev + 60)}>+1m</button>
+                  <button type="button" onClick={() => setTimerSeconds((prev) => prev + 300)}>+5m</button>
+                  <button type="button" onClick={() => setTimerSeconds((prev) => prev + 600)}>+10m</button>
                 </div>
                 <div className="ziro-timer-actions">
                   <button
+                    type="button"
                     className="ziro-timer-start-btn"
-                    onClick={() => setIsTimerRunning((r) => !r)}
+                    onClick={() => {
+                      if (timerSeconds === 0) setTimerSeconds(300);
+                      setIsTimerRunning((r) => !r);
+                    }}
                   >
                     {isTimerRunning ? 'Pause' : 'Start'}
                   </button>
                   <button
+                    type="button"
                     className="ziro-timer-reset-btn"
                     onClick={() => {
                       setIsTimerRunning(false);
