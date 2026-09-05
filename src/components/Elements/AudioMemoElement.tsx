@@ -45,9 +45,10 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
   // 1. Playback Engine (Real Audio Blob or Speech Synthesis + Audio Chime)
   const handleTogglePlay = (e: React.MouseEvent | React.PointerEvent) => {
     e.stopPropagation();
+    console.log('🎙️ [VOICE MEMO] Play button clicked! Element ID:', element.id);
 
     if (isPlaying) {
-      // Pause
+      console.log('🎙️ [VOICE MEMO] Pausing playback');
       setIsPlaying(false);
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
@@ -70,6 +71,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         if (ctx.state === 'suspended') {
           ctx.resume();
         }
+        console.log('🎙️ [VOICE MEMO] AudioContext active, state:', ctx.state);
         // Sequence of pleasant chime tones: C5 -> E5 -> G5 -> C6
         const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
@@ -78,20 +80,22 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
           const noteTime = ctx.currentTime + idx * 0.18;
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, noteTime);
-          gain.gain.setValueAtTime(0.25, noteTime);
+          gain.gain.setValueAtTime(0.3, noteTime);
           gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(noteTime);
           osc.stop(noteTime + 0.36);
         });
+        console.log('🎙️ [VOICE MEMO] AUDIO STARTED - Melodic chimes playing');
       }
-    } catch {
-      // safe
+    } catch (err) {
+      console.error('🎙️ [VOICE MEMO] Web Audio chime error:', err);
     }
 
     // If we have a recorded audio blob URL, play it
     if (element.audioBlobUrl) {
+      console.log('🎙️ [VOICE MEMO] Playing custom recorded audio blob');
       const audio = new Audio(element.audioBlobUrl);
       audioPlayerRef.current = audio;
 
@@ -106,7 +110,10 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         setProgress(0);
       };
 
-      audio.play().catch(() => {
+      audio.play().then(() => {
+        console.log('🎙️ [VOICE MEMO] Custom audio blob playing successfully');
+      }).catch((err) => {
+        console.warn('🎙️ [VOICE MEMO] Audio blob play warning, falling back to speech:', err);
         speakVoiceNote();
       });
     } else {
@@ -119,9 +126,10 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
       try {
         window.speechSynthesis.cancel();
         const textToSpeak = `${element.title || 'Voice Note'}. By ${element.authorName || 'Team Member'}: This whiteboard note is approved!`;
+        console.log('🎙️ [VOICE MEMO] Speaking voice note aloud:', textToSpeak);
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.rate = 1.0;
-        utterance.pitch = 1.0;
+        utterance.pitch = 1.05;
 
         const durationEstimate = 4;
         let elapsed = 0;
@@ -131,20 +139,23 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         }, 100);
 
         utterance.onend = () => {
+          console.log('🎙️ [VOICE MEMO] Speech playback completed');
           clearInterval(progressInterval);
           setIsPlaying(false);
           setProgress(100);
           setTimeout(() => setProgress(0), 400);
         };
 
-        utterance.onerror = () => {
+        utterance.onerror = (err) => {
+          console.error('🎙️ [VOICE MEMO] Speech synthesis error:', err);
           clearInterval(progressInterval);
           setIsPlaying(false);
           setProgress(0);
         };
 
         window.speechSynthesis.speak(utterance);
-      } catch {
+      } catch (err) {
+        console.error('🎙️ [VOICE MEMO] SpeechSynthesis exception:', err);
         simulateProgress();
       }
     } else {
