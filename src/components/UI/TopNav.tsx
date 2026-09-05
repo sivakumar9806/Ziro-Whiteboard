@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Radio,
   ClipboardList,
+  User as UserIcon,
 } from 'lucide-react';
 import type { BoardMetadata, User, CollaboratorPresence, RoomInfo } from '../../types/whiteboard';
 
@@ -149,6 +150,19 @@ export const TopNav: React.FC<TopNavProps> = ({
                 <div className="dropdown-divider" />
 
                 <button
+                  type="button"
+                  className="dropdown-item"
+                  onClick={() => {
+                    setShowMainMenu(false);
+                    onOpenAuth();
+                  }}
+                >
+                  <UserIcon size={15} className="text-blue-500" />
+                  <span>Account ({currentUser.id === 'user-guest' ? 'Sign In / Sign Up' : currentUser.name})</span>
+                </button>
+
+                <button
+                  type="button"
                   className="dropdown-item"
                   onClick={() => {
                     setShowMainMenu(false);
