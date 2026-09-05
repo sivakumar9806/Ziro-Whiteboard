@@ -40,12 +40,10 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
   }, [element.text]);
 
   useEffect(() => {
-    if ((isSelected || isEditingDirectly) && textareaRef.current) {
-      if (isEditingDirectly) {
-        textareaRef.current.focus();
-      }
+    if (isEditingDirectly && textareaRef.current) {
+      textareaRef.current.focus();
     }
-  }, [isSelected, isEditingDirectly]);
+  }, [isEditingDirectly]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -83,6 +81,7 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
       }}
       onClick={() => {
         onStartEditing?.();
+        textareaRef.current?.focus();
       }}
     >
       <textarea
@@ -97,15 +96,9 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           onUpdate(element.id, { text: draftText });
         }}
         onKeyDown={handleKeyDown}
-        onPointerDown={(e) => {
-          e.stopPropagation();
-        }}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
           height: '100%',
@@ -124,7 +117,7 @@ export const StickyNoteElement: React.FC<StickyNoteElementProps> = ({
           pointerEvents: 'auto',
           userSelect: 'text',
         }}
-        placeholder="Type something..."
+        placeholder="Type a sticky note..."
       />
 
       {/* Miro signature folded corner bottom right */}

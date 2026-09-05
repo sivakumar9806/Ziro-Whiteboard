@@ -213,7 +213,38 @@ export interface CollaboratorPresence {
   selectedElementId?: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarColor: string;
+  text: string;
+  timestamp: number;
+}
+
+export interface ReactionEvent {
+  id: string;
+  emoji: string;
+  senderName: string;
+  x?: number;
+  y?: number;
+  timestamp: number;
+}
+
+export interface RoomInfo {
+  roomId: string;
+  connected: boolean;
+  peerCount: number;
+  isHost?: boolean;
+}
+
 export type RealtimeMessage =
   | { type: 'PRESENCE_UPDATE'; payload: CollaboratorPresence }
   | { type: 'ELEMENTS_SYNC'; payload: { boardId: string; elements: CanvasElement[]; senderId: string } }
-  | { type: 'USER_LEFT'; payload: { id: string; boardId: string } };
+  | { type: 'USER_LEFT'; payload: { id: string; boardId: string } }
+  | { type: 'CHAT_MESSAGE'; payload: ChatMessage }
+  | { type: 'REACTION_TRIGGER'; payload: ReactionEvent }
+  | { type: 'REQUEST_BOARD_STATE'; payload: { boardId: string; requesterId: string } }
+  | { type: 'SYNC_BOARD_STATE'; payload: { boardId: string; elements: CanvasElement[]; metadata?: BoardMetadata; senderId: string } }
+  | { type: 'VOICE_STATUS'; payload: { peerId: string; isMuted: boolean; isSpeaking: boolean } };
+

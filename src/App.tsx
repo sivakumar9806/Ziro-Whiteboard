@@ -9,6 +9,9 @@ import type {
   BoardRecord,
   CollaboratorPresence,
   Point,
+  ChatMessage,
+  ReactionEvent,
+  RoomInfo,
 } from './types/whiteboard';
 import { getCurrentUser } from './services/authService';
 import {
@@ -36,6 +39,8 @@ import { TemplatesModal } from './components/UI/TemplatesModal';
 import { ShortcutsModal } from './components/UI/ShortcutsModal';
 import { BoardsDashboardModal } from './components/UI/BoardsDashboardModal';
 import { AuthModal } from './components/UI/AuthModal';
+import { ShareInviteModal } from './components/UI/ShareInviteModal';
+import { LiveDiscussionPanel } from './components/UI/LiveDiscussionPanel';
 
 export const App: React.FC = () => {
   // 1. Authentication State
@@ -95,42 +100,92 @@ export const App: React.FC = () => {
   const [isSpacePanning, setIsSpacePanning] = useState(false);
 
   // 6. Active Tool Options
-  const [activeStickyColor, setActiveStickyColor] = useState<StickyColor>('yellow');
+  const [activeStickyColor, setActiveStickyColor] = useState<StickyColor>('blue');
   const [activeStrokeColor] = useState<string>('#3b82f6');
   const [activeFillColor] = useState<string>('#ffffff');
   const [activeStrokeWidth] = useState<number>(2);
 
-  // 7. Real-Time Collaboration & Presence State
+  // 7. Real-Time Collaboration & Room State
   const [collaborators, setCollaborators] = useState<CollaboratorPresence[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const simulationRef = useRef<CollabSimulation | null>(null);
+  const [roomInfo, setRoomInfo] = useState<RoomInfo>({
+    roomId: 'main',
+    connected: false,
+    peerCount: 1,
+  });
 
-  // 8. UI Modals
+  // 8. Live Discussion, Chat & Voice State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isDiscussionOpen, setIsDiscussionOpen] = useState(false);
+  const [isDiscussionExpanded, setIsDiscussionExpanded] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [floatingReactions, setFloatingReactions] = useState<ReactionEvent[]>([]);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(true);
+
+  // 9. Other UI Modals
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
 
-  // Auto-save debounced effect to local board database
+  // Determine active Room ID from URL or default board
+  const getActiveRoomId = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const roomParam = searchParams.get('room');
+      if (roomParam) return roomParam;
+      const hash = window.location.hash;
+      if (hash.startsWith('#/room/')) {
+        return hash.replace('#/room/', '');
+      }
+    }
+    return metadata.id.replace(/[^a-zA-Z0-9_-]/g, '-');
+  }, [metadata.id]);
+
+  // Keep live peer service updated with latest board state provider
+  useEffect(() => {
+    realtimeService.setBoardStateProvider(() => ({
+      elements,
+      metadata,
+    }));
+  }, [elements, metadata]);
+
+  // Connect to Live WebRTC Mesh Room on mount or when room changes
+  useEffect(() => {
+    const roomId = getActiveRoomId();
+    realtimeService.joinRoom(roomId, currentUser);
+
+    const unsubscribeStatus = realtimeService.subscribeRoomStatus((info) => {
+      setRoomInfo(info);
+    });
+
+    return () => {
+      unsubscribeStatus();
+    };
+  }, [getActiveRoomId, currentUser]);
+
+  // Auto-save debounced effect to local board database & broadcast changes
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(() => {
       saveBoardRecord({ metadata, elements, viewport });
       setSaveStatus('saved');
-      // Broadcast element updates to open collaborator tabs
+      // Broadcast element updates to all connected room peers & local tabs
       realtimeService.broadcastElements(metadata.id, elements);
-    }, 400);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [metadata, elements, viewport]);
 
-  // Real-Time Cross-Tab Collaboration Listener
+  // Real-Time Cross-Network & Cross-Tab Collaboration Listener
   useEffect(() => {
     const unsubscribe = realtimeService.subscribe((msg) => {
       if (msg.type === 'PRESENCE_UPDATE') {
         if (msg.payload.id === realtimeService.clientId) return; // ignore self
-        if (msg.payload.boardId !== metadata.id) return; // different board
 
         setCollaborators((prev) => {
           const filtered = prev.filter((c) => c.id !== msg.payload.id);
@@ -138,19 +193,45 @@ export const App: React.FC = () => {
         });
       } else if (msg.type === 'ELEMENTS_SYNC') {
         if (msg.payload.senderId === realtimeService.clientId) return;
-        if (msg.payload.boardId !== metadata.id) return;
 
-        // Sync remote elements
+        // Sync remote elements from collaborator
         setElementsTransient(() => msg.payload.elements);
+      } else if (msg.type === 'SYNC_BOARD_STATE') {
+        if (msg.payload.senderId === realtimeService.clientId) return;
+        if (msg.payload.elements && msg.payload.elements.length > 0) {
+          setElementsTransient(() => msg.payload.elements);
+          if (msg.payload.metadata?.title) {
+            setMetadata((prev) => ({ ...prev, title: msg.payload.metadata!.title }));
+          }
+        }
+      } else if (msg.type === 'CHAT_MESSAGE') {
+        setChatMessages((prev) => [...prev, msg.payload]);
+        if (!isDiscussionOpen) {
+          setUnreadCount((c) => c + 1);
+        }
+      } else if (msg.type === 'REACTION_TRIGGER') {
+        setFloatingReactions((prev) => [...prev, msg.payload]);
+        try {
+          confetti({
+            particleCount: 25,
+            spread: 60,
+            origin: { y: 0.7, x: 0.5 },
+          });
+        } catch {
+          // Safe fallback
+        }
+        setTimeout(() => {
+          setFloatingReactions((prev) => prev.filter((r) => r.id !== msg.payload.id));
+        }, 3000);
       } else if (msg.type === 'USER_LEFT') {
         setCollaborators((prev) => prev.filter((c) => c.id !== msg.payload.id));
       }
     });
 
-    // Periodically prune stale collaborators (inactive > 10s)
+    // Periodically prune stale collaborators (inactive > 12s)
     const pruneTimer = setInterval(() => {
       setCollaborators((prev) =>
-        prev.filter((c) => c.isSimulated || Date.now() - c.lastActive < 10000)
+        prev.filter((c) => c.isSimulated || Date.now() - c.lastActive < 12000)
       );
     }, 4000);
 
@@ -159,7 +240,7 @@ export const App: React.FC = () => {
       clearInterval(pruneTimer);
       realtimeService.broadcastLeave(metadata.id);
     };
-  }, [metadata.id, setElementsTransient]);
+  }, [metadata.id, setElementsTransient, isDiscussionOpen]);
 
   // Local Cursor broadcast handler
   const handleLocalCursorMove = useCallback(
@@ -168,12 +249,77 @@ export const App: React.FC = () => {
         currentUser,
         metadata.id,
         worldPt.x,
-        worldPt.y
+        worldPt.y,
+        selectedIds[0]
       );
       realtimeService.broadcastPresence(presence);
     },
-    [currentUser, metadata.id]
+    [currentUser, metadata.id, selectedIds]
   );
+
+  // Switch Room Action
+  const handleJoinRoom = useCallback(
+    (newRoomId: string) => {
+      const clean = newRoomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('room', clean);
+        window.history.pushState({}, '', url.toString());
+      }
+      realtimeService.joinRoom(clean, currentUser);
+    },
+    [currentUser]
+  );
+
+  // Send Discussion Message
+  const handleSendMessage = useCallback(
+    (text: string) => {
+      const newMsg = realtimeService.broadcastChatMessage(text, currentUser);
+      setChatMessages((prev) => [...prev, newMsg]);
+    },
+    [currentUser]
+  );
+
+  // Send Reaction
+  const handleSendReaction = useCallback(
+    (emoji: string) => {
+      const reaction = realtimeService.broadcastReaction(emoji, currentUser);
+      setFloatingReactions((prev) => [...prev, reaction]);
+      try {
+        confetti({
+          particleCount: 30,
+          spread: 70,
+          origin: { y: 0.6, x: 0.5 },
+        });
+      } catch {
+        // Safe fallback
+      }
+      setTimeout(() => {
+        setFloatingReactions((prev) => prev.filter((r) => r.id !== reaction.id));
+      }, 3000);
+    },
+    [currentUser]
+  );
+
+  // Voice Chat Controls
+  const handleStartVoice = useCallback(async () => {
+    const success = await realtimeService.startVoiceChat();
+    if (success) {
+      setIsVoiceActive(true);
+      setIsMicMuted(false);
+    }
+  }, []);
+
+  const handleToggleMute = useCallback(() => {
+    const isMuted = realtimeService.toggleMute();
+    setIsMicMuted(isMuted);
+  }, []);
+
+  const handleStopVoice = useCallback(() => {
+    realtimeService.stopVoiceChat();
+    setIsVoiceActive(false);
+    setIsMicMuted(true);
+  }, []);
 
   // Toggle Live Collaborator Simulation
   const handleToggleSimulation = useCallback(() => {
@@ -227,8 +373,10 @@ export const App: React.FC = () => {
         simulationRef.current = null;
         setIsSimulating(false);
       }
+
+      handleJoinRoom(targetBoard.metadata.id);
     },
-    [setElements, resetHistory, setViewport, isSimulating]
+    [setElements, resetHistory, setViewport, isSimulating, handleJoinRoom]
   );
 
   // Actions
@@ -415,6 +563,14 @@ export const App: React.FC = () => {
         isSimulating={isSimulating}
         onToggleSimulation={handleToggleSimulation}
         saveStatus={saveStatus}
+        onOpenShareModal={() => setIsShareModalOpen(true)}
+        onToggleDiscussion={() => {
+          setIsDiscussionOpen((prev) => !prev);
+          setUnreadCount(0);
+        }}
+        isDiscussionOpen={isDiscussionOpen}
+        unreadMessagesCount={unreadCount}
+        roomInfo={roomInfo}
       />
 
       {/* Left Miro Tool Dock */}
@@ -460,6 +616,37 @@ export const App: React.FC = () => {
         onLocalCursorMove={handleLocalCursorMove}
       />
 
+      {/* Floating Canvas Reactions Stream */}
+      {floatingReactions.length > 0 && (
+        <div className="ziro-floating-reactions-overlay">
+          {floatingReactions.map((reaction) => (
+            <div key={reaction.id} className="ziro-floating-emoji-item">
+              <span className="ziro-floating-emoji-icon">{reaction.emoji}</span>
+              <span className="ziro-floating-emoji-user">{reaction.senderName}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Live Discussion, Chat & Voice Panel */}
+      <LiveDiscussionPanel
+        isOpen={isDiscussionOpen}
+        onClose={() => setIsDiscussionOpen(false)}
+        currentUser={currentUser}
+        collaborators={collaborators}
+        roomInfo={roomInfo}
+        chatMessages={chatMessages}
+        onSendMessage={handleSendMessage}
+        onSendReaction={handleSendReaction}
+        isVoiceActive={isVoiceActive}
+        isMicMuted={isMicMuted}
+        onStartVoice={handleStartVoice}
+        onToggleMute={handleToggleMute}
+        onStopVoice={handleStopVoice}
+        onToggleExpand={() => setIsDiscussionExpanded((prev) => !prev)}
+        isExpanded={isDiscussionExpanded}
+      />
+
       {/* Bottom Right Zoom & Navigation Dock */}
       <ZoomControls
         zoom={viewport.zoom}
@@ -484,6 +671,17 @@ export const App: React.FC = () => {
           onClose={() => setShowMinimap(false)}
         />
       )}
+
+      {/* Share & Multi-User Invite Modal */}
+      <ShareInviteModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        boardTitle={metadata.title}
+        currentUser={currentUser}
+        collaborators={collaborators}
+        roomInfo={roomInfo}
+        onJoinRoom={handleJoinRoom}
+      />
 
       {/* Workspace Boards Dashboard Modal */}
       <BoardsDashboardModal

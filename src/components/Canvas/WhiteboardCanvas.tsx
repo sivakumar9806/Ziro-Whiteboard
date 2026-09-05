@@ -248,7 +248,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       if (hitElement) {
         const isAlreadySelected = selectedIds.includes(hitElement.id);
 
-        if (e.detail === 2 || editingElementId === hitElement.id) {
+        if (
+          e.detail === 2 ||
+          editingElementId === hitElement.id ||
+          (isAlreadySelected && (hitElement.type === 'text' || hitElement.type === 'sticky'))
+        ) {
           setSelectedIds([hitElement.id]);
           setEditingElementId(hitElement.id);
           return;
@@ -704,7 +708,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           />
         )}
 
-        {selectionBounds && selectedIds.length > 0 && interactionMode !== 'drawing' && interactionMode !== 'creating_arrow' && (
+        {selectionBounds && selectedIds.length > 0 && interactionMode !== 'drawing' && interactionMode !== 'creating_arrow' && !editingElementId && (
           <SelectionBox
             bounds={selectionBounds}
             zoom={viewport.zoom}

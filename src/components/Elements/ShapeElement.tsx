@@ -12,25 +12,32 @@ interface ShapeElementProps {
 
 export const ShapeElement: React.FC<ShapeElementProps> = ({
   element,
+  isSelected,
   onUpdate,
   isEditingDirectly,
   onStartEditing,
   onFinishEditing,
 }) => {
-  const [isEditing, setIsEditing] = useState(isEditingDirectly || false);
+  const [isEditing, setIsEditing] = useState(isEditingDirectly ?? false);
   const [draftText, setDraftText] = useState(element.text || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (isEditingDirectly) {
-      setIsEditing(true);
+    setDraftText(element.text || '');
+  }, [element.text]);
+
+  useEffect(() => {
+    if (isEditingDirectly !== undefined) {
+      setIsEditing(isEditingDirectly);
     }
   }, [isEditingDirectly]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
+      const textarea = textareaRef.current;
+      textarea.focus();
+      const len = textarea.value.length;
+      textarea.setSelectionRange(len, len);
     }
   }, [isEditing]);
 
@@ -46,7 +53,8 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
     onFinishEditing?.();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    e.stopPropagation();
     if (e.key === 'Escape') {
       setIsEditing(false);
       setDraftText(element.text || '');
@@ -69,8 +77,8 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
             cy={h / 2}
             rx={(w - strokeW) / 2}
             ry={(h - strokeW) / 2}
-            fill={element.fill}
-            stroke={element.stroke}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -81,8 +89,8 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
         return (
           <path
             d={d}
-            fill={element.fill}
-            stroke={element.stroke}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -94,8 +102,8 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
         return (
           <path
             d={d}
-            fill={element.fill}
-            stroke={element.stroke}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -113,14 +121,14 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
           const angle = (i * Math.PI) / 5 - Math.PI / 2;
           const x = cx + r * Math.cos(angle);
           const y = cy + r * Math.sin(angle);
-          d += i === 0 ? `M ${x} ${y} ` : `L ${x} ${y} `;
+          d += (i === 0 ? 'M ' : 'L ') + x + ' ' + y + ' ';
         }
         d += 'Z';
         return (
           <path
             d={d}
-            fill={element.fill}
-            stroke={element.stroke}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -128,17 +136,16 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
       }
 
       case 'cloud': {
-        const d = `M ${w * 0.25} ${h * 0.7} 
-                   A ${w * 0.15} ${h * 0.25} 0 0 1 ${w * 0.25} ${h * 0.4} 
-                   A ${w * 0.2} ${h * 0.3} 0 0 1 ${w * 0.55} ${h * 0.25} 
-                   A ${w * 0.25} ${h * 0.3} 0 0 1 ${w * 0.8} ${h * 0.45} 
-                   A ${w * 0.15} ${h * 0.25} 0 0 1 ${w * 0.75} ${h * 0.7} 
-                   Z`;
         return (
           <path
-            d={d}
-            fill={element.fill}
-            stroke={element.stroke}
+            d={`M ${w * 0.25} ${h * 0.75} 
+                A ${w * 0.18} ${h * 0.22} 0 0 1 ${w * 0.15} ${h * 0.45} 
+                A ${w * 0.2} ${h * 0.25} 0 0 1 ${w * 0.4} ${h * 0.25} 
+                A ${w * 0.25} ${h * 0.3} 0 0 1 ${w * 0.75} ${h * 0.3} 
+                A ${w * 0.2} ${h * 0.25} 0 0 1 ${w * 0.88} ${h * 0.55} 
+                A ${w * 0.18} ${h * 0.22} 0 0 1 ${w * 0.75} ${h * 0.75} Z`}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -146,23 +153,23 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
       }
 
       case 'speech_bubble': {
-        const r = 10;
-        const tailW = Math.min(24, w * 0.2);
-        const tailH = Math.min(16, h * 0.2);
-        const bodyH = h - tailH;
-        const d = `M ${r} 0 
-                   H ${w - r} A ${r} ${r} 0 0 1 ${w} ${r} 
-                   V ${bodyH - r} A ${r} ${r} 0 0 1 ${w - r} ${bodyH} 
-                   H ${tailW * 2} 
-                   L ${tailW} ${h} 
-                   L ${tailW * 1.2} ${bodyH} 
-                   H ${r} A ${r} ${r} 0 0 1 0 ${bodyH - r} 
-                   V ${r} A ${r} ${r} 0 0 1 ${r} 0 Z`;
+        const r = 12;
         return (
           <path
-            d={d}
-            fill={element.fill}
-            stroke={element.stroke}
+            d={`M ${r} 0 
+                H ${w - r} 
+                A ${r} ${r} 0 0 1 ${w} ${r} 
+                V ${h * 0.7 - r} 
+                A ${r} ${r} 0 0 1 ${w - r} ${h * 0.7} 
+                H ${w * 0.4} 
+                L ${w * 0.2} ${h} 
+                L ${w * 0.25} ${h * 0.7} 
+                H ${r} 
+                A ${r} ${r} 0 0 1 0 ${h * 0.7 - r} 
+                V ${r} 
+                A ${r} ${r} 0 0 1 ${r} 0 Z`}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -178,8 +185,8 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
             height={h - strokeW}
             rx={16}
             ry={16}
-            fill={element.fill}
-            stroke={element.stroke}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -193,10 +200,10 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
             y={strokeW / 2}
             width={w - strokeW}
             height={h - strokeW}
-            rx={element.borderRadius ?? 4}
-            ry={element.borderRadius ?? 4}
-            fill={element.fill}
-            stroke={element.stroke}
+            rx={4}
+            ry={4}
+            fill={element.fill || '#ffffff'}
+            stroke={element.stroke || '#3b82f6'}
             strokeWidth={strokeW}
             strokeDasharray={strokeDash}
           />
@@ -215,7 +222,18 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
         cursor: isEditing ? 'text' : 'default',
         overflow: 'visible',
       }}
+      onClick={() => {
+        if (!isEditing && isSelected) {
+          setIsEditing(true);
+          onStartEditing?.();
+        }
+      }}
       onDoubleClick={handleDoubleClick}
+      onPointerDown={(e) => {
+        if (isEditing) {
+          e.stopPropagation();
+        }
+      }}
     >
       {/* SVG Shape Graphic */}
       <svg
@@ -257,6 +275,7 @@ export const ShapeElement: React.FC<ShapeElementProps> = ({
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             style={{
               width: '100%',

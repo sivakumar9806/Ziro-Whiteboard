@@ -1,82 +1,92 @@
-import type { RealtimeMessage, CollaboratorPresence, CanvasElement, User } from '../types/whiteboard';
-
-const CHANNEL_NAME = 'miro_whiteboard_sync_channel';
+import type {
+  RealtimeMessage,
+  CollaboratorPresence,
+  CanvasElement,
+  User,
+  ChatMessage,
+  ReactionEvent,
+  RoomInfo,
+  BoardMetadata,
+} from '../types/whiteboard';
+import { livePeerService } from './livePeerService';
 
 class RealtimeService {
-  private channel: BroadcastChannel | null = null;
-  private messageListeners: ((msg: RealtimeMessage) => void)[] = [];
-  public clientId: string = `client-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-
-  constructor() {
-    this.initChannel();
+  public get clientId(): string {
+    return livePeerService.clientId;
   }
 
-  private initChannel() {
-    if (typeof BroadcastChannel !== 'undefined') {
-      try {
-        this.channel = new BroadcastChannel(CHANNEL_NAME);
-        this.channel.onmessage = (event: MessageEvent<RealtimeMessage>) => {
-          this.notifyListeners(event.data);
-        };
-      } catch (err) {
-        console.warn('BroadcastChannel not supported or failed:', err);
-      }
-    }
+  public setBoardStateProvider(provider: () => { elements: CanvasElement[]; metadata: BoardMetadata }) {
+    livePeerService.setBoardStateProvider(provider);
+  }
+
+  public joinRoom(roomId: string, user: User) {
+    livePeerService.joinRoom(roomId, user);
+  }
+
+  public leaveRoom() {
+    livePeerService.leaveRoom();
   }
 
   public subscribe(listener: (msg: RealtimeMessage) => void): () => void {
-    this.messageListeners.push(listener);
-    return () => {
-      this.messageListeners = this.messageListeners.filter((l) => l !== listener);
-    };
+    return livePeerService.subscribe(listener);
   }
 
-  private notifyListeners(msg: RealtimeMessage) {
-    this.messageListeners.forEach((listener) => {
-      try {
-        listener(msg);
-      } catch (err) {
-        console.error('Error in realtime message listener:', err);
-      }
-    });
+  public subscribeRoomStatus(listener: (info: RoomInfo) => void): () => void {
+    return livePeerService.subscribeRoomStatus(listener);
+  }
+
+  public subscribeVoiceStream(listener: (peerId: string, stream: MediaStream) => void): () => void {
+    return livePeerService.subscribeVoiceStream(listener);
   }
 
   public broadcastPresence(presence: CollaboratorPresence) {
-    if (!this.channel) return;
-    this.channel.postMessage({
-      type: 'PRESENCE_UPDATE',
-      payload: presence,
-    });
+    livePeerService.broadcastPresence(presence);
   }
 
   public broadcastElements(boardId: string, elements: CanvasElement[]) {
-    if (!this.channel) return;
-    this.channel.postMessage({
-      type: 'ELEMENTS_SYNC',
-      payload: {
-        boardId,
-        elements,
-        senderId: this.clientId,
-      },
-    });
+    livePeerService.broadcastElements(boardId, elements);
+  }
+
+  public broadcastChatMessage(text: string, user: User): ChatMessage {
+    return livePeerService.broadcastChatMessage(text, user);
+  }
+
+  public broadcastReaction(emoji: string, user: User, x?: number, y?: number): ReactionEvent {
+    return livePeerService.broadcastReaction(emoji, user, x, y);
   }
 
   public broadcastLeave(boardId: string) {
-    if (!this.channel) return;
-    this.channel.postMessage({
-      type: 'USER_LEFT',
-      payload: { id: this.clientId, boardId },
-    });
+    livePeerService.broadcastLeave(boardId);
   }
 
-  public createPresenceObject(user: User, boardId: string, cursorX: number, cursorY: number): CollaboratorPresence {
-    return {
-      id: this.clientId,
-      user,
-      boardId,
-      cursor: { x: cursorX, y: cursorY },
-      lastActive: Date.now(),
-    };
+  public startVoiceChat(): Promise<boolean> {
+    return livePeerService.startVoiceChat();
+  }
+
+  public toggleMute(): boolean {
+    return livePeerService.toggleMute();
+  }
+
+  public stopVoiceChat() {
+    livePeerService.stopVoiceChat();
+  }
+
+  public get isMicMuted(): boolean {
+    return livePeerService.isMicMuted;
+  }
+
+  public get isVoiceActive(): boolean {
+    return livePeerService.isVoiceActive;
+  }
+
+  public createPresenceObject(
+    user: User,
+    boardId: string,
+    cursorX: number,
+    cursorY: number,
+    selectedElementId?: string
+  ): CollaboratorPresence {
+    return livePeerService.createPresenceObject(user, boardId, cursorX, cursorY, selectedElementId);
   }
 }
 

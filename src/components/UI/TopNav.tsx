@@ -18,8 +18,10 @@ import {
   Smile,
   Timer,
   Menu,
+  MessageSquare,
+  Radio,
 } from 'lucide-react';
-import type { BoardMetadata, User, CollaboratorPresence } from '../../types/whiteboard';
+import type { BoardMetadata, User, CollaboratorPresence, RoomInfo } from '../../types/whiteboard';
 
 interface TopNavProps {
   metadata: BoardMetadata;
@@ -42,6 +44,11 @@ interface TopNavProps {
   onToggleSimulation: () => void;
   saveStatus: 'saved' | 'saving';
   onToggleStar?: () => void;
+  onOpenShareModal: () => void;
+  onToggleDiscussion: () => void;
+  isDiscussionOpen: boolean;
+  unreadMessagesCount: number;
+  roomInfo: RoomInfo;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -63,13 +70,17 @@ export const TopNav: React.FC<TopNavProps> = ({
   isSimulating,
   onToggleSimulation,
   saveStatus,
+  onOpenShareModal,
+  onToggleDiscussion,
+  isDiscussionOpen,
+  unreadMessagesCount,
+  roomInfo,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(metadata.title);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [isStarred, setIsStarred] = useState(metadata.isStarred || false);
-  const [showShareToast, setShowShareToast] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(300);
@@ -100,12 +111,6 @@ export const TopNav: React.FC<TopNavProps> = ({
     }
   };
 
-  const handleShareClick = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setShowShareToast(true);
-    setTimeout(() => setShowShareToast(false), 2500);
-  };
-
   return (
     <header className="ziro-top-bar" aria-label="Ziro Navigation Bar">
       {/* Left Section: Logo, Main Menu, Breadcrumbs, Title, Star & Save status */}
@@ -125,7 +130,7 @@ export const TopNav: React.FC<TopNavProps> = ({
               <div className="flyout-backdrop" onClick={() => setShowMainMenu(false)} />
               <div className="ziro-main-menu-popover">
                 <div className="ziro-menu-header">
-                  <div className="ziro-brand-icon">
+                  <div className="ziro-brand-icon" style={{ backgroundColor: '#4262ff', color: '#ffffff' }}>
                     <span>Z</span>
                   </div>
                   <div>
@@ -198,8 +203,8 @@ export const TopNav: React.FC<TopNavProps> = ({
 
         {/* Ziro Brand Logo */}
         <button className="ziro-logo-button" onClick={onOpenDashboard} title="Go to Ziro Dashboard">
-          <div className="ziro-logo-badge">
-            <span className="ziro-logo-letter">Z</span>
+          <div className="ziro-logo-badge" style={{ backgroundColor: '#4262ff' }}>
+            <span className="ziro-logo-letter" style={{ color: '#ffffff' }}>Z</span>
           </div>
           <span className="ziro-logo-text">ziro</span>
         </button>
@@ -254,6 +259,17 @@ export const TopNav: React.FC<TopNavProps> = ({
               </>
             )}
           </div>
+
+          {/* Live WebRTC Room Badge */}
+          <button
+            className="ziro-room-status-badge"
+            onClick={onOpenShareModal}
+            title="Click to view live room & invite link"
+          >
+            <Radio size={12} className="text-emerald-500 animate-pulse" />
+            <span className="ziro-room-name-text">Room: {roomInfo.roomId || 'main'}</span>
+            <span className="ziro-room-count-pill">{collaborators.length + 1}</span>
+          </button>
         </div>
       </div>
 
@@ -400,6 +416,19 @@ export const TopNav: React.FC<TopNavProps> = ({
           )}
         </div>
 
+        {/* Live Discussion & Meeting Chat Button */}
+        <button
+          className={`ziro-discussion-toggle-btn ${isDiscussionOpen ? 'active' : ''}`}
+          onClick={onToggleDiscussion}
+          title="Open Live Discussion, Chat & Voice"
+        >
+          <MessageSquare size={15} strokeWidth={2.2} />
+          <span>Discussion</span>
+          {unreadMessagesCount > 0 && (
+            <span className="ziro-unread-count-badge">{unreadMessagesCount}</span>
+          )}
+        </button>
+
         {/* Presentation Mode Button */}
         <button
           className="ziro-present-btn"
@@ -417,7 +446,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         </button>
 
         {/* Prominent Miro Blue Share Button */}
-        <button className="ziro-share-btn" onClick={handleShareClick} title="Copy Board Link">
+        <button className="ziro-share-btn" onClick={onOpenShareModal} title="Share & Invite Collaborators">
           <Share2 size={14} strokeWidth={2.2} />
           <span>Share</span>
         </button>
@@ -489,14 +518,6 @@ export const TopNav: React.FC<TopNavProps> = ({
             </>
           )}
         </div>
-
-        {/* Share Link Toast */}
-        {showShareToast && (
-          <div className="ziro-share-toast">
-            <Check size={14} className="text-emerald-400" />
-            <span>Board link copied to clipboard!</span>
-          </div>
-        )}
       </div>
     </header>
   );

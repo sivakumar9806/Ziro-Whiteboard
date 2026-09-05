@@ -18,24 +18,41 @@ export const TextElement: React.FC<TextElementProps> = ({
   onStartEditing,
   onFinishEditing,
 }) => {
-  const [isEditing, setIsEditing] = useState(isEditingDirectly || false);
-  const [draftText, setDraftText] = useState(element.text);
+  const [isEditing, setIsEditing] = useState(isEditingDirectly ?? false);
+  const [draftText, setDraftText] = useState(element.text || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Sync draft text when element text changes externally
   useEffect(() => {
-    if (isEditingDirectly) {
-      setIsEditing(true);
+    setDraftText(element.text || '');
+  }, [element.text]);
+
+  // Sync editing state
+  useEffect(() => {
+    if (isEditingDirectly !== undefined) {
+      setIsEditing(isEditingDirectly);
     }
   }, [isEditingDirectly]);
 
+  // Focus textarea when editing mode activates
   useEffect(() => {
     if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
+      const textarea = textareaRef.current;
+      textarea.focus();
+      // Move cursor to end of text
+      const len = textarea.value.length;
+      textarea.setSelectionRange(len, len);
+      // Auto-resize
+      adjustHeight(textarea);
     }
   }, [isEditing]);
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
+  const adjustHeight = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(36, el.scrollHeight)}px`;
+  };
+
+  const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsEditing(true);
     onStartEditing?.();
@@ -47,10 +64,18 @@ export const TextElement: React.FC<TextElementProps> = ({
     onFinishEditing?.();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setDraftText(val);
+    adjustHeight(e.target);
+    onUpdate(element.id, { text: val });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    e.stopPropagation();
     if (e.key === 'Escape') {
       setIsEditing(false);
-      setDraftText(element.text);
+      onUpdate(element.id, { text: draftText });
       onFinishEditing?.();
     }
   };
@@ -58,63 +83,80 @@ export const TextElement: React.FC<TextElementProps> = ({
   return (
     <div
       style={{
-        width: `${element.width}px`,
-        minHeight: `${element.height}px`,
-        padding: '6px 8px',
+        width: `${element.width || 240}px`,
+        minHeight: `${element.height || 40}px`,
+        padding: '6px 10px',
         borderRadius: '4px',
         backgroundColor: element.fill || 'transparent',
         boxSizing: 'border-box',
         userSelect: isEditing ? 'text' : 'none',
-        cursor: isEditing ? 'text' : 'default',
-        outline: isSelected && !isEditing ? '1px dashed #3b82f6' : 'none',
+        cursor: isEditing ? 'text' : 'pointer',
+        outline: isSelected && !isEditing ? '1.5px dashed #3b82f6' : 'none',
         outlineOffset: '2px',
+        position: 'relative',
       }}
-      onDoubleClick={handleDoubleClick}
+      onClick={(e) => {
+        if (!isEditing && isSelected) {
+          handleStartEdit(e);
+        }
+      }}
+      onDoubleClick={handleStartEdit}
+      onPointerDown={(e) => {
+        if (isEditing) {
+          e.stopPropagation();
+        }
+      }}
     >
       {isEditing ? (
         <textarea
           ref={textareaRef}
           value={draftText}
-          onChange={(e) => {
-            setDraftText(e.target.value);
-            onUpdate(element.id, { text: e.target.value });
-          }}
+          onChange={handleChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
           style={{
             width: '100%',
-            minHeight: `${element.height}px`,
+            minHeight: '36px',
             border: 'none',
             outline: 'none',
             backgroundColor: 'transparent',
             resize: 'none',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: `${element.fontSize || 16}px`,
+            overflow: 'hidden',
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+            fontSize: `${element.fontSize || 18}px`,
             fontWeight: element.fontWeight || 'normal',
-            color: element.fontColor || '#1e293b',
+            color: element.fontColor || '#0f172a',
             textAlign: element.textAlign || 'left',
             lineHeight: 1.4,
             padding: 0,
+            display: 'block',
+            boxSizing: 'border-box',
           }}
-          placeholder="Type something..."
+          placeholder="Type something here..."
         />
       ) : (
         <div
           style={{
             width: '100%',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: `${element.fontSize || 16}px`,
+            minHeight: '24px',
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+            fontSize: `${element.fontSize || 18}px`,
             fontWeight: element.fontWeight || 'normal',
-            color: element.fontColor || '#1e293b',
+            color: element.fontColor || '#0f172a',
             textAlign: element.textAlign || 'left',
             lineHeight: 1.4,
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
         >
-          {element.text || <span style={{ opacity: 0.4, fontStyle: 'italic' }}>Double click to edit</span>}
+          {draftText || (
+            <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '15px' }}>
+              Click to type text...
+            </span>
+          )}
         </div>
       )}
     </div>
