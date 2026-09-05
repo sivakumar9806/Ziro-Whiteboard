@@ -83,8 +83,21 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [initialElementsSnapshot, setInitialElementsSnapshot] = useState<CanvasElement[]>([]);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
 
+  // Laser pointer glowing trail points
+  const [laserPoints, setLaserPoints] = useState<{ x: number; y: number; time: number }[]>([]);
+
   // Freehand drawing in-progress points
   const [currentDrawPoints, setCurrentDrawPoints] = useState<Point[]>([]);
+
+  // Laser Pointer decay animation loop
+  React.useEffect(() => {
+    if (laserPoints.length === 0) return;
+    const animId = requestAnimationFrame(() => {
+      const now = Date.now();
+      setLaserPoints((prev) => prev.filter((p) => now - p.time < 1000));
+    });
+    return () => cancelAnimationFrame(animId);
+  }, [laserPoints]);
 
   // Arrow / Shape creation in-progress
   const [creationStart, setCreationStart] = useState<Point | null>(null);
@@ -298,6 +311,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     // Broadcast live cursor to collaborators
     onLocalCursorMove?.(worldPt);
+
+    // Laser pointer recording
+    if (activeTool === 'laser') {
+      setLaserPoints((prev) => [...prev.slice(-40), { x: worldPt.x, y: worldPt.y, time: Date.now() }]);
+    }
 
     if (interactionMode === 'panning') {
       const dx = screenPt.x - dragStartPoint.x;
@@ -588,6 +606,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (interactionMode === 'panning' || isSpacePanning || activeTool === 'pan') {
       return interactionMode === 'panning' ? 'grabbing' : 'grab';
     }
+    if (activeTool === 'laser') return 'crosshair';
     if (activeTool === 'eraser') return 'crosshair';
     if (activeTool === 'draw') return 'crosshair';
     if (activeTool === 'arrow' || activeTool === 'rectangle' || activeTool === 'circle' || activeTool === 'text' || activeTool === 'sticky') {
@@ -647,6 +666,72 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
         {/* Real-time Collaborative Cursors */}
         <CollaboratorCursors collaborators={collaborators} />
+
+        {/* 🔦 Glowing Neon Laser Pointer Trail */}
+        {laserPoints.length > 0 && (
+          <svg
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: '1px',
+              height: '1px',
+              overflow: 'visible',
+              pointerEvents: 'none',
+              zIndex: 999999,
+            }}
+          >
+            <defs>
+              <filter id="laser-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <polyline
+              points={laserPoints.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke="#ff0055"
+              strokeWidth={7}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.4}
+              filter="url(#laser-glow)"
+            />
+            <polyline
+              points={laserPoints.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke="#ff3366"
+              strokeWidth={4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.8}
+            />
+            <polyline
+              points={laserPoints.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Glowing Laser Pointer Tip */}
+            {laserPoints[laserPoints.length - 1] && (
+              <circle
+                cx={laserPoints[laserPoints.length - 1].x}
+                cy={laserPoints[laserPoints.length - 1].y}
+                r={6}
+                fill="#ff0055"
+                filter="url(#laser-glow)"
+                style={{ animation: 'laserPulse 0.6s infinite alternate' }}
+              />
+            )}
+          </svg>
+        )}
 
         {interactionMode === 'drawing' && currentDrawPoints.length > 0 && (
           <ElementRenderer

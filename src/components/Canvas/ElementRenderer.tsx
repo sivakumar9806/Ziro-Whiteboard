@@ -7,6 +7,7 @@ import { ArrowElement } from '../Elements/ArrowElement';
 import { FreehandElement } from '../Elements/FreehandElement';
 import { TextElement } from '../Elements/TextElement';
 import { CommentElement } from '../Elements/CommentElement';
+import { AudioMemoElement } from '../Elements/AudioMemoElement';
 
 interface ElementRendererProps {
   element: CanvasElement;
@@ -43,6 +44,19 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
 
   if (element.type === 'draw') {
     return <FreehandElement element={element} isSelected={isSelected} />;
+  }
+
+  if (element.type === 'audio_memo') {
+    return (
+      <div style={containerStyle} data-element-id={element.id}>
+        <AudioMemoElement
+          element={element}
+          isSelected={isSelected}
+          onUpdate={(id, updates) => onUpdate(id, updates)}
+          onDelete={onDelete}
+        />
+      </div>
+    );
   }
 
   const isShapeType = [

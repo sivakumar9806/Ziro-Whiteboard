@@ -16,6 +16,10 @@ export type ToolType =
   | 'draw'
   | 'frame'
   | 'comment'
+  | 'laser'
+  | 'ai_studio'
+  | 'mermaid'
+  | 'voting'
   | 'eraser';
 
 export type ElementType =
@@ -32,7 +36,8 @@ export type ElementType =
   | 'draw'
   | 'text'
   | 'frame'
-  | 'comment';
+  | 'comment'
+  | 'audio_memo';
 
 export type StickyColor =
   | 'yellow'
@@ -139,6 +144,15 @@ export interface TextElementData extends BaseElement {
   fill?: string;
 }
 
+export interface AudioMemoElementData extends BaseElement {
+  type: 'audio_memo';
+  title: string;
+  audioDuration: number;
+  authorName: string;
+  audioBlobUrl?: string;
+  isPlaying?: boolean;
+}
+
 export type CanvasElement =
   | StickyElement
   | ShapeElementData
@@ -146,7 +160,8 @@ export type CanvasElement =
   | CommentElementData
   | ArrowElementData
   | DrawElementData
-  | TextElementData;
+  | TextElementData
+  | AudioMemoElementData;
 
 export interface ViewportTransform {
   x: number;

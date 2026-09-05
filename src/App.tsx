@@ -43,6 +43,9 @@ import { ShareInviteModal } from './components/UI/ShareInviteModal';
 import { LiveDiscussionPanel } from './components/UI/LiveDiscussionPanel';
 import { DataCollectionModal } from './components/UI/DataCollectionModal';
 import { GuestAccessBanner } from './components/UI/GuestAccessBanner';
+import { AIStudioModal } from './components/UI/AIStudioModal';
+import { MermaidModal } from './components/UI/MermaidModal';
+import { VotingSessionModal } from './components/UI/VotingSessionModal';
 import { checkSessionApi } from './services/authService';
 
 export const App: React.FC = () => {
@@ -138,12 +141,46 @@ export const App: React.FC = () => {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(true);
 
-  // 9. Other UI Modals
+  // 9. Other UI Modals & Superpowers
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
+  const [isAIStudioOpen, setIsAIStudioOpen] = useState(false);
+  const [isMermaidOpen, setIsMermaidOpen] = useState(false);
+  const [isVotingOpen, setIsVotingOpen] = useState(false);
+
+  // Batch insert elements (e.g. from AI Studio or Mermaid Runner)
+  const handleInsertBatchElements = useCallback((newElements: CanvasElement[]) => {
+    setElements((prev) => [...prev, ...newElements]);
+    setSelectedIds(newElements.map((el) => el.id));
+  }, [setElements, setSelectedIds]);
+
+  // Insert interactive Voice Memo Audio Pin
+  const handleAddVoiceMemo = useCallback(() => {
+    if (isGuest) {
+      setIsAuthOpen(true);
+      return;
+    }
+    const cx = -viewport.x / viewport.zoom + window.innerWidth / (2 * viewport.zoom);
+    const cy = -viewport.y / viewport.zoom + window.innerHeight / (2 * viewport.zoom);
+    const newMemoId = `audio-memo-${Date.now()}`;
+    const newMemo: CanvasElement = {
+      id: newMemoId,
+      type: 'audio_memo',
+      x: cx - 110,
+      y: cy - 70,
+      width: 220,
+      height: 140,
+      title: '🎙️ Team Voice Memo',
+      audioDuration: 14,
+      authorName: currentUser.name || 'You',
+      zIndex: elements.length + 10,
+    };
+    setElements((prev) => [...prev, newMemo]);
+    setSelectedIds([newMemoId]);
+  }, [isGuest, viewport, currentUser.name, elements.length, setElements, setSelectedIds]);
 
   // Determine active Room ID from URL or default board
   const getActiveRoomId = useCallback(() => {
@@ -637,6 +674,29 @@ export const App: React.FC = () => {
           }
           setIsTemplatesOpen(true);
         }}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenAIStudio={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsAIStudioOpen(true);
+        }}
+        onOpenMermaid={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsMermaidOpen(true);
+        }}
+        onOpenVoting={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsVotingOpen(true);
+        }}
+        onAddVoiceMemo={handleAddVoiceMemo}
       />
 
       {/* Contextual Properties Floating Dock */}
@@ -728,6 +788,29 @@ export const App: React.FC = () => {
           onClose={() => setShowMinimap(false)}
         />
       )}
+
+      {/* 🤖 AI Whiteboard Studio Superpower Modal */}
+      <AIStudioModal
+        isOpen={isAIStudioOpen}
+        onClose={() => setIsAIStudioOpen(false)}
+        viewport={viewport}
+        onInsertElements={handleInsertBatchElements}
+      />
+
+      {/* 📊 Mermaid & Markdown Diagram Compiler Modal */}
+      <MermaidModal
+        isOpen={isMermaidOpen}
+        onClose={() => setIsMermaidOpen(false)}
+        viewport={viewport}
+        onInsertElements={handleInsertBatchElements}
+      />
+
+      {/* 🗳️ Interactive Team Dot-Voting & Priority Matrix Modal */}
+      <VotingSessionModal
+        isOpen={isVotingOpen}
+        onClose={() => setIsVotingOpen(false)}
+        elements={elements}
+      />
 
       {/* Share & Multi-User Invite Modal */}
       <ShareInviteModal

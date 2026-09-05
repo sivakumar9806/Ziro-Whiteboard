@@ -22,6 +22,11 @@ import {
   Smartphone,
   Monitor,
   Columns,
+  Sparkles,
+  Zap,
+  GitBranch,
+  Vote,
+  Mic,
 } from 'lucide-react';
 import type { ToolType, StickyColor } from '../../types/whiteboard';
 
@@ -32,6 +37,10 @@ interface LeftToolbarProps {
   setActiveStickyColor: (color: StickyColor) => void;
   onOpenTemplates: () => void;
   onOpenShortcuts?: () => void;
+  onOpenAIStudio?: () => void;
+  onOpenMermaid?: () => void;
+  onOpenVoting?: () => void;
+  onAddVoiceMemo?: () => void;
 }
 
 export const MIRO_STICKY_SWATCHES: { color: StickyColor; bg: string; border: string; label: string }[] = [
@@ -52,6 +61,10 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
   setActiveStickyColor,
   onOpenTemplates,
   onOpenShortcuts,
+  onOpenAIStudio,
+  onOpenMermaid,
+  onOpenVoting,
+  onAddVoiceMemo,
 }) => {
   const [showStickyMenu, setShowStickyMenu] = useState(false);
   const [showShapesMenu, setShowShapesMenu] = useState(false);
@@ -75,6 +88,35 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
   return (
     <aside className="ziro-toolbar-container" aria-label="Ziro Whiteboard Tools">
       <nav className="ziro-toolbar-dock">
+        {/* 0. 🤖 AI Studio Superpower (Top Feature) */}
+        {onOpenAIStudio && (
+          <div
+            className="ziro-tool-item relative"
+            onMouseEnter={() => setHoveredTool('ai_studio')}
+            onMouseLeave={() => setHoveredTool(null)}
+          >
+            <button
+              className="ziro-tool-btn ziro-ai-tool-btn"
+              onClick={() => {
+                onOpenAIStudio();
+                setShowStickyMenu(false);
+                setShowShapesMenu(false);
+                setShowFramesMenu(false);
+                setShowMoreMenu(false);
+              }}
+              aria-label="AI Whiteboard Studio"
+            >
+              <Sparkles size={20} className="text-indigo-600 animate-pulse" strokeWidth={2.4} />
+            </button>
+            {hoveredTool === 'ai_studio' && (
+              <div className="ziro-tooltip ziro-ai-tooltip">
+                <span className="font-semibold">🤖 AI Whiteboard Studio</span>
+                <span className="ziro-tooltip-sub">Prompt-to-Flowchart</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 1. Select Tool (V) */}
         <div
           className="ziro-tool-item"
@@ -88,6 +130,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Select tool (V)"
           >
@@ -115,6 +158,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Hand tool (H)"
           >
@@ -129,7 +173,35 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 3. Templates (T) */}
+        {/* 3. 🔦 Presentation Laser Pointer */}
+        <div
+          className="ziro-tool-item"
+          onMouseEnter={() => setHoveredTool('laser')}
+          onMouseLeave={() => setHoveredTool(null)}
+        >
+          <button
+            className={`ziro-tool-btn ${activeTool === 'laser' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTool('laser');
+              setShowStickyMenu(false);
+              setShowShapesMenu(false);
+              setShowFramesMenu(false);
+              setShowMoreMenu(false);
+            }}
+            aria-label="Laser Pointer"
+          >
+            {activeTool === 'laser' && <div className="ziro-active-pill" />}
+            <Zap size={20} className={activeTool === 'laser' ? 'text-amber-500' : ''} strokeWidth={2.2} />
+          </button>
+          {hoveredTool === 'laser' && (
+            <div className="ziro-tooltip">
+              <span>🔦 Laser Pointer</span>
+              <span className="ziro-tooltip-sub">Glowing Trail</span>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Templates (T) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('template')}
@@ -142,6 +214,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Templates"
           >
@@ -156,7 +229,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
 
         <div className="ziro-group-divider" />
 
-        {/* 4. Text Tool (T) */}
+        {/* 5. Text Tool (T) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('text')}
@@ -169,6 +242,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Text box (T)"
           >
@@ -183,7 +257,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 5. Sticky Note (N / S) */}
+        {/* 6. Sticky Note (N / S) */}
         <div
           className="ziro-tool-item relative"
           onMouseEnter={() => setHoveredTool('sticky')}
@@ -196,6 +270,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu((prev) => !prev);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Sticky note (N / S)"
           >
@@ -242,7 +317,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 6. Shape Tool (Flyout with 8 shapes) */}
+        {/* 7. Shape Tool (Flyout with 8 shapes) */}
         <div
           className="ziro-tool-item relative"
           onMouseEnter={() => setHoveredTool('shapes')}
@@ -255,6 +330,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowShapesMenu((prev) => !prev);
               setShowStickyMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Shapes (R / O)"
           >
@@ -382,7 +458,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 7. Connection Line / Arrow (A) */}
+        {/* 8. Connection Line / Arrow (A) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('arrow')}
@@ -395,6 +471,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Connection Arrow (A / L)"
           >
@@ -409,7 +486,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 8. Freehand Pen (P) */}
+        {/* 9. Freehand Pen (P) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('draw')}
@@ -422,6 +499,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Pen / Draw (P)"
           >
@@ -436,7 +514,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 9. Frame Container Tool (F) */}
+        {/* 10. Frame Container Tool (F) */}
         <div
           className="ziro-tool-item relative"
           onMouseEnter={() => setHoveredTool('frame')}
@@ -449,6 +527,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowFramesMenu((prev) => !prev);
               setShowStickyMenu(false);
               setShowShapesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Frame container (F)"
           >
@@ -505,7 +584,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 10. Comment Tool (C) */}
+        {/* 11. Comment Tool (C) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('comment')}
@@ -518,6 +597,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Comment (C)"
           >
@@ -534,7 +614,36 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
 
         <div className="ziro-group-divider" />
 
-        {/* 11. Eraser Tool (E) */}
+        {/* 12. 🎙️ Voice Memo Pin Tool */}
+        {onAddVoiceMemo && (
+          <div
+            className="ziro-tool-item"
+            onMouseEnter={() => setHoveredTool('voice_memo')}
+            onMouseLeave={() => setHoveredTool(null)}
+          >
+            <button
+              className="ziro-tool-btn"
+              onClick={() => {
+                onAddVoiceMemo();
+                setShowStickyMenu(false);
+                setShowShapesMenu(false);
+                setShowFramesMenu(false);
+                setShowMoreMenu(false);
+              }}
+              aria-label="Record Voice Memo Note"
+            >
+              <Mic size={20} className="text-violet-600" strokeWidth={2.2} />
+            </button>
+            {hoveredTool === 'voice_memo' && (
+              <div className="ziro-tooltip">
+                <span>🎙️ Voice Memo Pin</span>
+                <span className="ziro-tooltip-sub">Audio Sticky</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 13. Eraser Tool (E) */}
         <div
           className="ziro-tool-item"
           onMouseEnter={() => setHoveredTool('eraser')}
@@ -547,6 +656,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowStickyMenu(false);
               setShowShapesMenu(false);
               setShowFramesMenu(false);
+              setShowMoreMenu(false);
             }}
             aria-label="Eraser (E)"
           >
@@ -561,7 +671,7 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
           )}
         </div>
 
-        {/* 12. More Tools / Apps (>> / ...) */}
+        {/* 14. More Tools & Superpower Apps (>> / ...) */}
         <div
           className="ziro-tool-item relative"
           onMouseEnter={() => setHoveredTool('more')}
@@ -575,22 +685,58 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
               setShowShapesMenu(false);
               setShowFramesMenu(false);
             }}
-            aria-label="More tools"
+            aria-label="More tools & apps"
           >
             <MoreHorizontal size={20} strokeWidth={2.2} />
           </button>
           {hoveredTool === 'more' && !showMoreMenu && (
             <div className="ziro-tooltip">
-              <span>More Apps</span>
+              <span>More Superpowers</span>
             </div>
           )}
 
           {showMoreMenu && (
             <>
               <div className="flyout-backdrop" onClick={() => setShowMoreMenu(false)} />
-              <div className="ziro-flyout-card" style={{ width: '220px' }}>
-                <div className="ziro-flyout-title">ZIRO APPS & TOOLS</div>
+              <div className="ziro-flyout-card" style={{ width: '230px' }}>
+                <div className="ziro-flyout-title">ZIRO SUPERPOWER APPS</div>
                 <div className="ziro-frames-menu">
+                  {onOpenAIStudio && (
+                    <button
+                      className="ziro-frame-menu-btn"
+                      onClick={() => {
+                        onOpenAIStudio();
+                        setShowMoreMenu(false);
+                      }}
+                    >
+                      <Sparkles size={16} className="text-indigo-600" />
+                      <span>AI Whiteboard Studio</span>
+                    </button>
+                  )}
+                  {onOpenMermaid && (
+                    <button
+                      className="ziro-frame-menu-btn"
+                      onClick={() => {
+                        onOpenMermaid();
+                        setShowMoreMenu(false);
+                      }}
+                    >
+                      <GitBranch size={16} className="text-blue-600" />
+                      <span>Mermaid Diagram Runner</span>
+                    </button>
+                  )}
+                  {onOpenVoting && (
+                    <button
+                      className="ziro-frame-menu-btn"
+                      onClick={() => {
+                        onOpenVoting();
+                        setShowMoreMenu(false);
+                      }}
+                    >
+                      <Vote size={16} className="text-emerald-600" />
+                      <span>Live Team Dot-Voting</span>
+                    </button>
+                  )}
                   <button
                     className="ziro-frame-menu-btn"
                     onClick={() => {
@@ -620,3 +766,4 @@ export const LeftToolbar: React.FC<LeftToolbarProps> = ({
     </aside>
   );
 };
+
