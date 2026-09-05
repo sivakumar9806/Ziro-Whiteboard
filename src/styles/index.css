@@ -40,6 +40,45 @@ html, body, #root {
 }
 
 /* =========================================================
+   UTILITY CLASSES
+   ========================================================= */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 4px; }
+.gap-1\.5 { gap: 6px; }
+.gap-2 { gap: 8px; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.text-xs { font-size: 12px; }
+.text-sm { font-size: 14px; }
+.text-\[10px\] { font-size: 10px; }
+.text-\[11px\] { font-size: 11px; }
+.text-slate-900 { color: #0f172a; }
+.text-slate-800 { color: #1e293b; }
+.text-slate-500 { color: #64748b; }
+.text-slate-400 { color: #94a3b8; }
+.text-blue-500 { color: #3b82f6; }
+.text-blue-600 { color: #2563eb; }
+.text-emerald-500 { color: #10b981; }
+.text-amber-500 { color: #f59e0b; }
+.text-red-500 { color: #ef4444; }
+.text-red-600 { color: #dc2626; }
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+/* =========================================================
    AUTHENTIC MIRO TOP BAR (ZIRO)
    ========================================================= */
 .ziro-top-bar {
@@ -55,7 +94,7 @@ html, body, #root {
   border-bottom: 1px solid var(--panel-border);
   padding: 0 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  z-index: 1000;
+  z-index: 1600;
   user-select: none;
 }
 
@@ -389,6 +428,19 @@ html, body, #root {
   color: var(--text-main);
 }
 
+/* Backdrops */
+.flyout-backdrop,
+.dropdown-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2050;
+  background: transparent;
+  cursor: default;
+}
+
 /* Popovers & Dropdowns */
 .ziro-main-menu-popover, .ziro-export-popover {
   position: absolute;
@@ -404,6 +456,45 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+  outline: none;
+}
+
+.dropdown-item:hover {
+  background: #f1f5f9;
+  color: var(--miro-blue);
+}
+
+.dropdown-item.text-red-600 {
+  color: #dc2626;
+}
+
+.dropdown-item.text-red-600:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
 }
 
 .ziro-export-popover {
@@ -836,7 +927,7 @@ html, body, #root {
 .zoom-controls-dock {
   position: absolute;
   bottom: 18px;
-  right: 18px;
+  right: 175px;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -845,7 +936,7 @@ html, body, #root {
   border-radius: var(--radius-md);
   padding: 3px 6px;
   box-shadow: var(--shadow-md);
-  z-index: 1000;
+  z-index: 1100;
 }
 
 .zoom-btn {
@@ -943,13 +1034,13 @@ html, body, #root {
 .minimap-container {
   position: absolute;
   bottom: 62px;
-  right: 18px;
+  right: 175px;
   background: #ffffff;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-md);
   padding: 8px;
   box-shadow: var(--shadow-lg);
-  z-index: 1000;
+  z-index: 1100;
   animation: fadeIn 0.15s ease;
 }
 
@@ -2759,5 +2850,24 @@ html, body, #root {
   font-weight: 700;
   color: var(--text-main);
 }
+
+/* Netlify Injected Drawer / Badge Compatibility */
+[id^="netlify-drawer"],
+iframe#netlify-drawer-root,
+.netlify-badge {
+  z-index: 990 !important;
+}
+
+@media (max-width: 768px) {
+  .zoom-controls-dock {
+    right: 16px;
+    bottom: 64px;
+  }
+  .minimap-container {
+    right: 16px;
+    bottom: 108px;
+  }
+}
+
 
 
