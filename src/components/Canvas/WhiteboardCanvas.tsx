@@ -112,9 +112,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // Pointer Down Handlers
   // -------------------------------------------------------------
   const handlePointerDown = (e: React.PointerEvent) => {
-    // If the click is directly on an interactive button or input, let the button handle it
+    // If the click is directly on an interactive button, input, or audio control, let the element handle it
     const isInteractive = !!(e.target as HTMLElement)?.closest(
-      'button, input, textarea, .audio-memo-play-btn, .audio-memo-record-btn, .audio-delete-btn, .audio-memo-title-input'
+      'button, input, textarea, .audio-memo-play-btn, .audio-memo-record-btn, .audio-delete-btn, .audio-memo-title-input, .audio-waveform-bars'
     );
     if (isInteractive) {
       return;

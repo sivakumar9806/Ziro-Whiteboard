@@ -26,6 +26,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const recordTimerRef = useRef<any>(null);
+  const playTimerRef = useRef<any>(null);
 
   // Stop playback when unmounting
   useEffect(() => {
@@ -33,37 +34,44 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
       }
-      if (window.speechSynthesis) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
       if (recordTimerRef.current) {
         clearInterval(recordTimerRef.current);
       }
+      if (playTimerRef.current) {
+        clearInterval(playTimerRef.current);
+      }
     };
   }, []);
 
-  // 1. Playback Engine (Real Audio Blob or Speech Synthesis + Audio Chime)
-  const handleTogglePlay = (e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    console.log('🎙️ [VOICE MEMO] Play button clicked! Element ID:', element.id);
+  // 1. Playback Engine (Instant Melodic Chimes + Speech Synthesis + Custom Blob)
+  const handleTogglePlay = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    console.log('🎙️ [VOICE MEMO] Play clicked! Current state isPlaying:', isPlaying);
 
     if (isPlaying) {
-      console.log('🎙️ [VOICE MEMO] Pausing playback');
+      console.log('🎙️ [VOICE MEMO] Stopping playback');
       setIsPlaying(false);
+      setProgress(0);
+      if (playTimerRef.current) clearInterval(playTimerRef.current);
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
       }
-      if (window.speechSynthesis) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
-      setProgress(0);
       return;
     }
 
     setIsPlaying(true);
     setProgress(0);
 
-    // Play pleasant audible melody chime immediately
+    // Play pleasant Web Audio Melody immediately on user gesture
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) {
@@ -71,7 +79,8 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         if (ctx.state === 'suspended') {
           ctx.resume();
         }
-        console.log('🎙️ [VOICE MEMO] AudioContext active, state:', ctx.state);
+        console.log('🎙️ [VOICE MEMO] AudioContext initialized, state:', ctx.state);
+
         // Sequence of pleasant chime tones: C5 -> E5 -> G5 -> C6
         const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
@@ -87,98 +96,99 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
           osc.start(noteTime);
           osc.stop(noteTime + 0.36);
         });
-        console.log('🎙️ [VOICE MEMO] AUDIO STARTED - Melodic chimes playing');
+        console.log('🎙️ [VOICE MEMO] Web Audio chime synthesized successfully');
       }
     } catch (err) {
-      console.error('🎙️ [VOICE MEMO] Web Audio chime error:', err);
+      console.error('🎙️ [VOICE MEMO] Web Audio synthesis note:', err);
     }
 
-    // If we have a recorded audio blob URL, play it
+    // Play Custom Blob Audio if recorded
     if (element.audioBlobUrl) {
       console.log('🎙️ [VOICE MEMO] Playing custom recorded audio blob');
-      const audio = new Audio(element.audioBlobUrl);
-      audioPlayerRef.current = audio;
-
-      audio.ontimeupdate = () => {
-        if (audio.duration) {
-          setProgress((audio.currentTime / audio.duration) * 100);
-        }
-      };
-
-      audio.onended = () => {
-        setIsPlaying(false);
-        setProgress(0);
-      };
-
-      audio.play().then(() => {
-        console.log('🎙️ [VOICE MEMO] Custom audio blob playing successfully');
-      }).catch((err) => {
-        console.warn('🎙️ [VOICE MEMO] Audio blob play warning, falling back to speech:', err);
-        speakVoiceNote();
-      });
-    } else {
-      speakVoiceNote();
-    }
-  };
-
-  const speakVoiceNote = () => {
-    if ('speechSynthesis' in window) {
       try {
-        window.speechSynthesis.cancel();
-        const textToSpeak = `${element.title || 'Voice Note'}. By ${element.authorName || 'Team Member'}: This whiteboard note is approved!`;
-        console.log('🎙️ [VOICE MEMO] Speaking voice note aloud:', textToSpeak);
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.05;
+        const audio = new Audio(element.audioBlobUrl);
+        audioPlayerRef.current = audio;
 
-        const durationEstimate = 4;
-        let elapsed = 0;
-        const progressInterval = setInterval(() => {
-          elapsed += 0.1;
-          setProgress(Math.min(95, (elapsed / durationEstimate) * 100));
-        }, 100);
-
-        utterance.onend = () => {
-          console.log('🎙️ [VOICE MEMO] Speech playback completed');
-          clearInterval(progressInterval);
-          setIsPlaying(false);
-          setProgress(100);
-          setTimeout(() => setProgress(0), 400);
+        audio.ontimeupdate = () => {
+          if (audio.duration) {
+            setProgress((audio.currentTime / audio.duration) * 100);
+          }
         };
 
-        utterance.onerror = (err) => {
-          console.error('🎙️ [VOICE MEMO] Speech synthesis error:', err);
-          clearInterval(progressInterval);
+        audio.onended = () => {
           setIsPlaying(false);
           setProgress(0);
         };
 
-        window.speechSynthesis.speak(utterance);
-      } catch (err) {
-        console.error('🎙️ [VOICE MEMO] SpeechSynthesis exception:', err);
-        simulateProgress();
+        audio.play().then(() => {
+          console.log('🎙️ [VOICE MEMO] Custom audio playing smoothly');
+        }).catch((err) => {
+          console.warn('🎙️ [VOICE MEMO] Blob play fallback to speech:', err);
+          startSpeechAndWaveAnimation();
+        });
+        return;
+      } catch {
+        startSpeechAndWaveAnimation();
+        return;
       }
-    } else {
-      simulateProgress();
     }
+
+    // Otherwise play speech synthesis + animated waveform
+    startSpeechAndWaveAnimation();
   };
 
-  const simulateProgress = () => {
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 5;
-      setProgress(p);
-      if (p >= 100) {
-        clearInterval(interval);
+  const startSpeechAndWaveAnimation = () => {
+    const totalDurationMs = 3600;
+    const startTime = Date.now();
+
+    if (playTimerRef.current) clearInterval(playTimerRef.current);
+    playTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, (elapsed / totalDurationMs) * 100);
+      setProgress(pct);
+
+      if (elapsed >= totalDurationMs) {
+        clearInterval(playTimerRef.current);
         setIsPlaying(false);
         setProgress(0);
       }
-    }, 150);
+    }, 50);
+
+    // Speak aloud using Web Speech Synthesis
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const textToSpeak = `${element.title || 'Voice Note'}. By ${element.authorName || 'Team Member'}: Whiteboard memo is approved!`;
+        console.log('🎙️ [VOICE MEMO] Speech synthesis speaking:', textToSpeak);
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.05;
+
+        utterance.onend = () => {
+          console.log('🎙️ [VOICE MEMO] Speech playback finished');
+          clearInterval(playTimerRef.current);
+          setIsPlaying(false);
+          setProgress(0);
+        };
+
+        utterance.onerror = (e) => {
+          console.warn('🎙️ [VOICE MEMO] Speech synthesis error/cancelled:', e);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('🎙️ [VOICE MEMO] SpeechSynthesis speak exception:', err);
+      }
+    }
   };
 
   // 2. Real Microphone Recording Engine
-  const handleToggleRecord = async (e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
+  const handleToggleRecord = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    console.log('🎙️ [VOICE MEMO] Record clicked! isRecording:', isRecording);
 
     if (isRecording) {
       // Stop recording
@@ -219,7 +229,8 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
       recordTimerRef.current = setInterval(() => {
         setRecordSeconds((s) => s + 1);
       }, 1000);
-    } catch {
+    } catch (err) {
+      console.warn('Microphone permission not granted:', err);
       alert('Microphone permission was not granted. Click Play to hear synthesized voice notes!');
     }
   };
@@ -238,7 +249,13 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         width: `${element.width || 250}px`,
         height: `${element.height || 145}px`,
       }}
-      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        // Prevent canvas drag if clicking within interactive controls
+        if ((e.target as HTMLElement).closest('button, input, textarea')) {
+          e.stopPropagation();
+        }
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="audio-memo-header">
@@ -294,10 +311,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         <button
           type="button"
           className={`audio-memo-play-btn ${isPlaying ? 'playing' : ''}`}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            handleTogglePlay(e);
-          }}
+          onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleTogglePlay}
           title={isPlaying ? 'Pause voice memo' : 'Play voice memo aloud'}
@@ -307,7 +321,12 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         </button>
 
         {/* Dynamic Waveform Display */}
-        <div className="audio-waveform-bars">
+        <div
+          className="audio-waveform-bars"
+          style={{ cursor: 'pointer' }}
+          onClick={handleTogglePlay}
+          title="Click to play voice memo"
+        >
           {waveformHeights.map((h, i) => {
             const isBarPassed = progress >= (i / waveformHeights.length) * 100;
             return (
@@ -327,10 +346,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         <button
           type="button"
           className={`audio-memo-record-btn ${isRecording ? 'recording' : ''}`}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            handleToggleRecord(e);
-          }}
+          onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={handleToggleRecord}
           title={isRecording ? 'Stop recording voice' : 'Record voice with microphone'}
