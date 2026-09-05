@@ -177,9 +177,9 @@ export const App: React.FC = () => {
     const newMemo: CanvasElement = {
       id: newMemoId,
       type: 'audio_memo',
-      x: cx - 110,
+      x: cx - 120,
       y: cy - 70,
-      width: 220,
+      width: 240,
       height: 140,
       title: '🎙️ Team Voice Memo',
       audioDuration: 14,
@@ -188,7 +188,15 @@ export const App: React.FC = () => {
     };
     setElements((prev) => [...prev, newMemo]);
     setSelectedIds([newMemoId]);
-  }, [isGuest, viewport, currentUser.name, elements.length, setElements, setSelectedIds]);
+
+    // Automatically center and zoom viewport on the new voice memo note
+    const rect = document.querySelector('.whiteboard-canvas-viewport')?.getBoundingClientRect();
+    if (rect) {
+      setTimeout(() => {
+        fitToElements([newMemo], rect);
+      }, 50);
+    }
+  }, [isGuest, viewport, currentUser.name, elements.length, setElements, setSelectedIds, fitToElements]);
 
   // Determine active Room ID from URL or default board
   const getActiveRoomId = useCallback(() => {

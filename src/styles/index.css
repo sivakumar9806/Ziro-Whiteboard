@@ -3536,60 +3536,186 @@ iframe#netlify-drawer-root,
   background: #ffffff;
   border: 1.5px solid #8b5cf6;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.18);
   padding: 12px;
-  width: 220px;
+  width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   user-select: none;
+  cursor: move;
+  transition: all 0.18s ease;
+}
+
+.audio-memo-card.selected {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3), 0 8px 24px rgba(139, 92, 246, 0.25);
+}
+
+.audio-memo-card.playing {
+  border-color: #6366f1;
+  background: #faf5ff;
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+}
+
+.audio-memo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.audio-memo-icon-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.audio-memo-icon-circle.pulse-glow {
+  animation: audioPulse 1s infinite alternate;
+}
+
+@keyframes audioPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(139, 92, 246, 0.4); }
+  100% { transform: scale(1.15); box-shadow: 0 0 10px rgba(139, 92, 246, 0.8); }
+}
+
+.audio-memo-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e1b4b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.audio-memo-title-input {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e1b4b;
+  border: 1px solid #8b5cf6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  width: 100%;
+  outline: none;
+}
+
+.audio-delete-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.audio-delete-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.audio-memo-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .audio-memo-play-btn {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #8b5cf6;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
   color: #ffffff;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: all 0.15s ease;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
 }
 
 .audio-memo-play-btn:hover {
-  background: #7c3aed;
-  transform: scale(1.05);
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
 }
 
-.audio-waveform-container {
+.audio-memo-play-btn.playing {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.audio-waveform-bars {
   display: flex;
   align-items: center;
-  gap: 3px;
-  height: 28px;
+  gap: 2.5px;
+  height: 30px;
   flex: 1;
 }
 
 .audio-wave-bar {
-  width: 4px;
-  background: #c4b5fd;
+  width: 3.5px;
+  background: #ddd6fe;
   border-radius: 2px;
-  transition: height 0.15s ease;
+  transition: height 0.15s ease, background 0.15s ease;
+  min-height: 4px;
 }
 
-.audio-wave-bar.active {
+.audio-wave-bar.passed {
+  background: #8b5cf6;
+}
+
+.audio-wave-bar.animating {
   background: #7c3aed;
-  animation: waveBounce 0.5s ease-in-out infinite alternate;
+  animation: waveBarBounce 0.45s ease-in-out infinite alternate;
 }
 
-@keyframes waveBounce {
-  0% {
-    height: 6px;
-  }
-  100% {
-    height: 24px;
-  }
+@keyframes waveBarBounce {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1.3); }
+}
+
+.audio-memo-duration {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.audio-memo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 6px;
+  font-size: 10px;
+}
+
+.audio-memo-author {
+  color: #94a3b8;
+}
+
+.audio-memo-status {
+  color: #8b5cf6;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.audio-memo-status.active {
+  color: #7c3aed;
+  font-weight: 700;
 }
