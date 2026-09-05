@@ -110,12 +110,16 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={handleTitleBlur}
               onKeyDown={(e) => e.key === 'Enter' && handleTitleBlur()}
+              onPointerDown={(e) => e.stopPropagation()}
               autoFocus
             />
           ) : (
             <span
               className="audio-memo-title"
-              onDoubleClick={() => setIsEditingTitle(true)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setIsEditingTitle(true);
+              }}
               title="Double click to rename"
             >
               {element.title || '🎙️ Team Voice Memo'}
@@ -126,6 +130,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
           <button
             type="button"
             className="audio-delete-btn"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onDelete?.(element.id);
@@ -142,6 +147,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         <button
           type="button"
           className={`audio-memo-play-btn ${isPlaying ? 'playing' : ''}`}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={togglePlay}
           title={isPlaying ? 'Pause voice memo' : 'Play voice memo'}
         >
