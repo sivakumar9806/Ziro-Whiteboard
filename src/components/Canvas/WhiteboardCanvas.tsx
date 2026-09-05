@@ -112,6 +112,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // Pointer Down Handlers
   // -------------------------------------------------------------
   const handlePointerDown = (e: React.PointerEvent) => {
+    // If the click is directly on an interactive button or input, let the button handle it
+    const isInteractive = !!(e.target as HTMLElement)?.closest(
+      'button, input, textarea, .audio-memo-play-btn, .audio-memo-record-btn, .audio-delete-btn, .audio-memo-title-input'
+    );
+    if (isInteractive) {
+      return;
+    }
+
     if (!containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const screenPt: Point = { x: e.clientX, y: e.clientY };

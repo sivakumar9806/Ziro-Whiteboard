@@ -62,7 +62,7 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
     setIsPlaying(true);
     setProgress(0);
 
-    // Play pleasant audible chime immediately
+    // Play pleasant audible melody chime immediately
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) {
@@ -70,18 +70,21 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         if (ctx.state === 'suspended') {
           ctx.resume();
         }
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, now);
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-        gain.gain.setValueAtTime(0.25, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.45);
+        // Sequence of pleasant chime tones: C5 -> E5 -> G5 -> C6
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const noteTime = ctx.currentTime + idx * 0.18;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, noteTime);
+          gain.gain.setValueAtTime(0.25, noteTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.36);
+        });
       }
     } catch {
       // safe
