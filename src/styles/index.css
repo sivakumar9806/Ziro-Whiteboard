@@ -3719,3 +3719,54 @@ iframe#netlify-drawer-root,
   color: #7c3aed;
   font-weight: 700;
 }
+
+.audio-memo-status.recording-text {
+  color: #ef4444;
+  font-weight: 700;
+  animation: pulseRecording 1s infinite alternate;
+}
+
+.audio-memo-card.recording {
+  border-color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+  background: #fff5f5;
+}
+
+.audio-memo-icon-circle.recording-pulse {
+  background: #ef4444;
+  animation: pulseRecording 0.8s infinite alternate;
+}
+
+@keyframes pulseRecording {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.15); opacity: 1; }
+}
+
+.audio-memo-record-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.audio-memo-record-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+.audio-memo-record-btn.recording {
+  background: #ef4444;
+  border-color: #dc2626;
+  color: #ffffff;
+  animation: pulseRecording 1s infinite alternate;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Play, Pause, Volume2, Trash2 } from 'lucide-react';
+import { Mic, Play, Pause, Volume2, Trash2, Radio } from 'lucide-react';
 import type { AudioMemoElementData } from '../../types/whiteboard';
 
 interface AudioMemoElementProps {
@@ -16,68 +16,169 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
   onDelete,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(element.title || '🎙️ Team Voice Memo');
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const oscRef = useRef<OscillatorNode | null>(null);
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const recordTimerRef = useRef<any>(null);
 
-  // Play realistic synthesized voice-note audio tone when playing
+  // Stop playback when unmounting
   useEffect(() => {
-    let timer: any = null;
-    if (isPlaying) {
-      try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          audioCtxRef.current = ctx;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(320, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(480, ctx.currentTime + 0.3);
-          gain.gain.setValueAtTime(0.08, ctx.currentTime);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          oscRef.current = osc;
-        }
-      } catch {
-        // Fallback safely
-      }
-
-      const stepTime = (element.audioDuration || 14) * 10;
-      timer = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            setIsPlaying(false);
-            if (oscRef.current) {
-              try { oscRef.current.stop(); } catch {}
-            }
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, stepTime);
-    } else {
-      if (oscRef.current) {
-        try { oscRef.current.stop(); } catch {}
-      }
-      setProgress(0);
-    }
-
     return () => {
-      if (timer) clearInterval(timer);
-      if (oscRef.current) {
-        try { oscRef.current.stop(); } catch {}
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      if (recordTimerRef.current) {
+        clearInterval(recordTimerRef.current);
       }
     };
-  }, [isPlaying, element.audioDuration]);
+  }, []);
 
-  const togglePlay = (e: React.MouseEvent) => {
+  // 1. Playback Engine (Real Audio Blob or Speech Synthesis)
+  const handleTogglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsPlaying((prev) => !prev);
-    onUpdate(element.id, { isPlaying: !isPlaying });
+
+    if (isPlaying) {
+      // Pause
+      setIsPlaying(false);
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      setProgress(0);
+      return;
+    }
+
+    setIsPlaying(true);
+    setProgress(0);
+
+    // If we have a recorded audio blob URL, play it
+    if (element.audioBlobUrl) {
+      const audio = new Audio(element.audioBlobUrl);
+      audioPlayerRef.current = audio;
+
+      audio.ontimeupdate = () => {
+        if (audio.duration) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
+      };
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        setProgress(0);
+      };
+
+      audio.play().catch(() => {
+        // Fallback to speech synthesis if autoplay blocked
+        speakVoiceNote();
+      });
+    } else {
+      // Speak the voice note aloud with SpeechSynthesis
+      speakVoiceNote();
+    }
+  };
+
+  const speakVoiceNote = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+
+      const textToSpeak = `${element.title || 'Team Voice Memo'}. Note by ${element.authorName || 'Team Member'}: Everything on this whiteboard section is approved and ready for next steps.`;
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.05;
+
+      const durationEstimate = 6;
+      let elapsed = 0;
+      const progressInterval = setInterval(() => {
+        elapsed += 0.1;
+        setProgress(Math.min(95, (elapsed / durationEstimate) * 100));
+      }, 100);
+
+      utterance.onend = () => {
+        clearInterval(progressInterval);
+        setIsPlaying(false);
+        setProgress(100);
+        setTimeout(() => setProgress(0), 400);
+      };
+
+      utterance.onerror = () => {
+        clearInterval(progressInterval);
+        setIsPlaying(false);
+        setProgress(0);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // Progress simulation fallback
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 5;
+        setProgress(p);
+        if (p >= 100) {
+          clearInterval(interval);
+          setIsPlaying(false);
+          setProgress(0);
+        }
+      }, 150);
+    }
+  };
+
+  // 2. Real Microphone Recording Engine
+  const handleToggleRecord = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        onUpdate(element.id, {
+          audioBlobUrl: audioUrl,
+          audioDuration: recordSeconds || 5,
+        });
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordSeconds(0);
+
+      recordTimerRef.current = setInterval(() => {
+        setRecordSeconds((s) => s + 1);
+      }, 1000);
+    } catch {
+      alert('Microphone permission was not granted. You can still use the Play button to hear spoken voice notes!');
+    }
   };
 
   const handleTitleBlur = () => {
@@ -89,18 +190,18 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
 
   return (
     <div
-      className={`audio-memo-card ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''}`}
+      className={`audio-memo-card ${isSelected ? 'selected' : ''} ${isPlaying ? 'playing' : ''} ${isRecording ? 'recording' : ''}`}
       style={{
-        width: `${element.width || 240}px`,
-        height: `${element.height || 140}px`,
+        width: `${element.width || 250}px`,
+        height: `${element.height || 145}px`,
       }}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="audio-memo-header">
         <div className="flex items-center gap-2 overflow-hidden flex-1">
-          <div className={`audio-memo-icon-circle ${isPlaying ? 'pulse-glow' : ''}`}>
-            <Mic size={14} className="text-white" />
+          <div className={`audio-memo-icon-circle ${isPlaying ? 'pulse-glow' : ''} ${isRecording ? 'recording-pulse' : ''}`}>
+            {isRecording ? <Radio size={13} className="text-white animate-pulse" /> : <Mic size={14} className="text-white" />}
           </div>
           {isEditingTitle ? (
             <input
@@ -142,16 +243,18 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         )}
       </div>
 
-      {/* Body: Play Button + Animated Waveform */}
+      {/* Body: Play Button + Record Button + Animated Waveform */}
       <div className="audio-memo-body">
+        {/* Play/Pause Button */}
         <button
           type="button"
           className={`audio-memo-play-btn ${isPlaying ? 'playing' : ''}`}
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={togglePlay}
-          title={isPlaying ? 'Pause voice memo' : 'Play voice memo'}
+          onClick={handleTogglePlay}
+          title={isPlaying ? 'Pause voice memo' : 'Play voice memo aloud'}
+          disabled={isRecording}
         >
-          {isPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
+          {isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
         </button>
 
         {/* Dynamic Waveform Display */}
@@ -161,19 +264,27 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
             return (
               <div
                 key={i}
-                className={`audio-wave-bar ${isPlaying ? 'animating' : ''} ${isBarPassed ? 'passed' : ''}`}
+                className={`audio-wave-bar ${isPlaying || isRecording ? 'animating' : ''} ${isBarPassed ? 'passed' : ''}`}
                 style={{
-                  height: isPlaying ? `${Math.min(100, h + Math.sin(Date.now() / 200 + i) * 20)}%` : `${h * 0.7}%`,
-                  animationDelay: `${(i % 5) * 0.1}s`,
+                  height: isPlaying || isRecording ? `${Math.min(100, h + Math.sin(Date.now() / 200 + i) * 25)}%` : `${h * 0.7}%`,
+                  animationDelay: `${(i % 5) * 0.08}s`,
                 }}
               />
             );
           })}
         </div>
 
-        <span className="audio-memo-duration">
-          {isPlaying ? `0:${Math.floor((progress / 100) * (element.audioDuration || 14)).toString().padStart(2, '0')}` : `0:${element.audioDuration || 14}`}
-        </span>
+        {/* Record Mic Button */}
+        <button
+          type="button"
+          className={`audio-memo-record-btn ${isRecording ? 'recording' : ''}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleToggleRecord}
+          title={isRecording ? 'Stop recording voice' : 'Record voice with microphone'}
+        >
+          <Mic size={13} />
+          <span>{isRecording ? `${recordSeconds}s` : 'Rec'}</span>
+        </button>
       </div>
 
       {/* Footer Info */}
@@ -183,10 +294,16 @@ export const AudioMemoElement: React.FC<AudioMemoElementProps> = ({
         </span>
         {isPlaying ? (
           <span className="audio-memo-status active">
-            <Volume2 size={12} className="animate-pulse" /> Playing Note
+            <Volume2 size={12} className="animate-pulse" /> Speaking Out Loud
+          </span>
+        ) : isRecording ? (
+          <span className="audio-memo-status recording-text">
+            🔴 Recording mic...
           </span>
         ) : (
-          <span className="audio-memo-status">Click ▶ to listen</span>
+          <span className="audio-memo-status">
+            {element.audioBlobUrl ? '🎵 Custom Audio' : '🔊 Click ▶ to Listen'}
+          </span>
         )}
       </div>
     </div>
