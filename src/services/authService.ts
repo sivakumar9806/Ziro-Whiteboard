@@ -56,11 +56,10 @@ export function getCurrentUser(): User {
     if (raw) {
       return JSON.parse(raw);
     }
-    const defaultUser = DEMO_USERS[0];
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(defaultUser));
-    return defaultUser;
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(GUEST_USER));
+    return GUEST_USER;
   } catch {
-    return DEMO_USERS[0];
+    return GUEST_USER;
   }
 }
 

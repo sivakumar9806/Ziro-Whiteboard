@@ -22,6 +22,7 @@ import {
   Radio,
   ClipboardList,
   User as UserIcon,
+  Sparkles,
 } from 'lucide-react';
 import type { BoardMetadata, User, CollaboratorPresence, RoomInfo } from '../../types/whiteboard';
 
@@ -280,25 +281,46 @@ export const TopNav: React.FC<TopNavProps> = ({
           </button>
 
           {/* Cloud Auto-save Status */}
-          <div className="ziro-save-pill" title="Changes saved automatically">
-            {saveStatus === 'saved' ? (
-              <>
-                <Check size={12} className="text-emerald-500" strokeWidth={2.5} />
-                <span>Saved</span>
-              </>
-            ) : (
-              <>
-                <span className="ziro-saving-dot" />
-                <span>Saving...</span>
-              </>
-            )}
-          </div>
+          {currentUser.id === 'user-guest' ? (
+            <button
+              type="button"
+              className="ziro-preview-pill"
+              onClick={onOpenAuth}
+              title="You are in Preview Mode. Sign In to save boards and unlock full access."
+            >
+              <span>⚡ Preview Mode</span>
+            </button>
+          ) : (
+            <div className="ziro-save-pill" title="Changes saved automatically to cloud">
+              {saveStatus === 'saved' ? (
+                <>
+                  <Check size={12} className="text-emerald-500" strokeWidth={2.5} />
+                  <span>Saved</span>
+                </>
+              ) : (
+                <>
+                  <span className="ziro-saving-dot" />
+                  <span>Saving...</span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Live WebRTC Room Badge */}
           <button
             className="ziro-room-status-badge"
-            onClick={onOpenShareModal}
-            title="Click to view live room & invite link"
+            onClick={() => {
+              if (currentUser.id === 'user-guest') {
+                onOpenAuth();
+                return;
+              }
+              onOpenShareModal();
+            }}
+            title={
+              currentUser.id === 'user-guest'
+                ? 'Sign in to generate and share live rooms'
+                : 'Click to view live room & invite link'
+            }
           >
             <Radio size={12} className="text-emerald-500 animate-pulse" />
             <span className="ziro-room-name-text">Room: {roomInfo.roomId || 'main'}</span>
@@ -334,38 +356,60 @@ export const TopNav: React.FC<TopNavProps> = ({
         {/* Real-time Collaboration Mode Toggle */}
         <button
           className={`ziro-collab-toggle-btn ${isSimulating ? 'active' : ''}`}
-          onClick={onToggleSimulation}
-          title="Simulate live multi-user collaboration"
+          onClick={() => {
+            if (currentUser.id === 'user-guest') {
+              onOpenAuth();
+              return;
+            }
+            onToggleSimulation();
+          }}
+          title={
+            currentUser.id === 'user-guest'
+              ? 'Sign in to simulate and run live team collaboration'
+              : 'Simulate live multi-user collaboration'
+          }
         >
           <Users size={14} strokeWidth={2} />
           <span>{isSimulating ? 'Live Collab (Active)' : 'Collab Simulation'}</span>
           {isSimulating && <span className="ziro-pulse-dot" />}
         </button>
 
-        {/* Active Collaborators Avatar Stack */}
-        <div className="ziro-avatar-stack">
-          {/* User Profile */}
-          <div
-            className="ziro-avatar-circle current-user"
-            style={{ backgroundColor: currentUser.avatarColor }}
+        {/* User Account Button: Guest Sign In CTA or Avatar Stack */}
+        {currentUser.id === 'user-guest' ? (
+          <button
+            type="button"
+            className="ziro-guest-auth-btn"
             onClick={onOpenAuth}
-            title={`${currentUser.name} (You) - Click to manage account`}
+            title="Sign In or Create an Account for Full Access"
           >
-            {currentUser.name.charAt(0)}
-          </div>
-
-          {/* Remote Collaborators */}
-          {collaborators.map((c) => (
+            <Sparkles size={14} className="text-amber-300" />
+            <span>Sign In / Sign Up</span>
+          </button>
+        ) : (
+          <div className="ziro-avatar-stack">
+            {/* User Profile */}
             <div
-              key={c.id}
-              className="ziro-avatar-circle"
-              style={{ backgroundColor: c.user.avatarColor }}
-              title={`${c.user.name} (Online)`}
+              className="ziro-avatar-circle current-user"
+              style={{ backgroundColor: currentUser.avatarColor }}
+              onClick={onOpenAuth}
+              title={`${currentUser.name} (You) - Click to manage account`}
             >
-              {c.user.name.charAt(0)}
+              {currentUser.name.charAt(0)}
             </div>
-          ))}
-        </div>
+
+            {/* Remote Collaborators */}
+            {collaborators.map((c) => (
+              <div
+                key={c.id}
+                className="ziro-avatar-circle"
+                style={{ backgroundColor: c.user.avatarColor }}
+                title={`${c.user.name} (Online)`}
+              >
+                {c.user.name.charAt(0)}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Reaction quick popup */}
         <div className="relative">

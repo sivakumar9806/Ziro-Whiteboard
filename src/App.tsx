@@ -42,12 +42,15 @@ import { AuthModal } from './components/UI/AuthModal';
 import { ShareInviteModal } from './components/UI/ShareInviteModal';
 import { LiveDiscussionPanel } from './components/UI/LiveDiscussionPanel';
 import { DataCollectionModal } from './components/UI/DataCollectionModal';
+import { GuestAccessBanner } from './components/UI/GuestAccessBanner';
 import { checkSessionApi } from './services/authService';
 
 export const App: React.FC = () => {
   // 1. Authentication State
   const [currentUser, setCurrentUser] = useState<User>(() => getCurrentUser());
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
+  const isGuest = currentUser.id === 'user-guest';
 
   // Auto-restore session from backend if token exists
   useEffect(() => {
@@ -560,13 +563,37 @@ export const App: React.FC = () => {
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
-        onExportPng={() => exportToPng({ metadata, elements, viewport })}
-        onExportJson={() => exportToJson({ metadata, elements, viewport })}
+        onExportPng={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          exportToPng({ metadata, elements, viewport });
+        }}
+        onExportJson={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          exportToJson({ metadata, elements, viewport });
+        }}
         onImportJson={handleImportJson}
         onClearBoard={handleClearBoard}
-        onOpenTemplates={() => setIsTemplatesOpen(true)}
+        onOpenTemplates={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsTemplatesOpen(true);
+        }}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
-        onOpenDashboard={() => setIsDashboardOpen(true)}
+        onOpenDashboard={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsDashboardOpen(true);
+        }}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenFeedback={() => setIsFeedbackOpen(true)}
         currentUser={currentUser}
@@ -574,8 +601,18 @@ export const App: React.FC = () => {
         isSimulating={isSimulating}
         onToggleSimulation={handleToggleSimulation}
         saveStatus={saveStatus}
-        onOpenShareModal={() => setIsShareModalOpen(true)}
+        onOpenShareModal={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsShareModalOpen(true);
+        }}
         onToggleDiscussion={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
           setIsDiscussionOpen((prev) => !prev);
           setUnreadCount(0);
         }}
@@ -584,13 +621,22 @@ export const App: React.FC = () => {
         roomInfo={roomInfo}
       />
 
+      {/* Guest Preview Notification Banner */}
+      {isGuest && <GuestAccessBanner onOpenAuth={() => setIsAuthOpen(true)} />}
+
       {/* Left Miro Tool Dock */}
       <LeftToolbar
         activeTool={activeTool}
         setActiveTool={setActiveTool}
         activeStickyColor={activeStickyColor}
         setActiveStickyColor={setActiveStickyColor}
-        onOpenTemplates={() => setIsTemplatesOpen(true)}
+        onOpenTemplates={() => {
+          if (isGuest) {
+            setIsAuthOpen(true);
+            return;
+          }
+          setIsTemplatesOpen(true);
+        }}
       />
 
       {/* Contextual Properties Floating Dock */}
