@@ -2,6 +2,7 @@ import type { User } from '../types/whiteboard';
 import { apiRequest, setAuthToken, getAuthToken } from './apiClient';
 
 const USERS_STORAGE_KEY = 'miro_accounts_db_v1';
+const PASSWORDS_STORAGE_KEY = 'miro_accounts_passwords_v1';
 const SESSION_STORAGE_KEY = 'miro_active_session_v1';
 
 export const DEMO_USERS: User[] = [
@@ -64,10 +65,12 @@ export function getCurrentUser(): User {
 }
 
 export async function loginUserApi(email: string, password?: string): Promise<User> {
+  const normalizedEmail = email.trim().toLowerCase();
+
   try {
     const res = await apiRequest<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password: password || 'password123' }),
+      body: JSON.stringify({ email: normalizedEmail, password: password || '' }),
     });
 
     if (res.token) {
@@ -75,9 +78,20 @@ export async function loginUserApi(email: string, password?: string): Promise<Us
     }
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.user));
     return res.user;
-  } catch {
-    // Local fallback
-    return loginUser(email);
+  } catch (err: any) {
+    const isNetworkError =
+      !err.message ||
+      err.message.includes('Failed to fetch') ||
+      err.message.includes('NetworkError') ||
+      err.message.includes('Network request failed');
+
+    // If server responded with an actual 400/401/404 error, throw that error to the user!
+    if (!isNetworkError) {
+      throw err;
+    }
+
+    // Offline / client-only fallback: check local accounts strictly
+    return loginUser(normalizedEmail, password);
   }
 }
 
@@ -88,12 +102,18 @@ export async function signupUserApi(
   roleTitle?: string,
   avatarColor?: string
 ): Promise<User> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (password && password.length < 6) {
+    throw new Error('Password must be at least 6 characters long.');
+  }
+
   try {
     const res = await apiRequest<{ user: User; token: string }>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
-        name,
-        email,
+        name: name.trim(),
+        email: normalizedEmail,
         password: password || 'password123',
         roleTitle,
         avatarColor,
@@ -105,9 +125,19 @@ export async function signupUserApi(
     }
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.user));
     return res.user;
-  } catch {
-    // Local fallback
-    return signupUser(name, email);
+  } catch (err: any) {
+    const isNetworkError =
+      !err.message ||
+      err.message.includes('Failed to fetch') ||
+      err.message.includes('NetworkError') ||
+      err.message.includes('Network request failed');
+
+    if (!isNetworkError) {
+      throw err;
+    }
+
+    // Offline / client-only fallback: sign up in local accounts strictly
+    return signupUser(name, normalizedEmail, password, roleTitle);
   }
 }
 
@@ -127,46 +157,66 @@ export async function checkSessionApi(): Promise<User | null> {
   }
 }
 
-export function loginUser(email: string): User {
+export function loginUser(email: string, password?: string): User {
   const users = getAllUsers();
-  let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = users.find((u) => u.email.toLowerCase() === normalizedEmail);
 
   if (!user) {
-    const namePart = email.split('@')[0];
-    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-    user = {
-      id: `user-${Date.now()}`,
-      name: formattedName,
-      email,
-      avatarColor: getRandomAvatarColor(),
-      roleTitle: 'Team Member',
-    };
-    users.push(user);
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    throw new Error('No account found with this email. Please click "Create Account" to sign up first.');
+  }
+
+  // Check demo user or password map
+  if (password) {
+    try {
+      const passwordsMap: Record<string, string> = JSON.parse(
+        localStorage.getItem(PASSWORDS_STORAGE_KEY) || '{}'
+      );
+      const isDemo = DEMO_USERS.some((d) => d.email.toLowerCase() === normalizedEmail);
+      if (!isDemo && passwordsMap[normalizedEmail] && passwordsMap[normalizedEmail] !== password) {
+        throw new Error('Incorrect password. Please verify your password and try again.');
+      }
+    } catch (err: any) {
+      if (err.message.includes('Incorrect password')) throw err;
+    }
   }
 
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
   return user;
 }
 
-export function signupUser(name: string, email: string): User {
+export function signupUser(name: string, email: string, password?: string, roleTitle?: string): User {
   const users = getAllUsers();
-  const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+
   if (existing) {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(existing));
-    return existing;
+    throw new Error('An account with this email already exists. Please click "Sign In" instead.');
   }
 
   const newUser: User = {
     id: `user-${Date.now()}`,
-    name,
-    email,
+    name: name.trim(),
+    email: normalizedEmail,
     avatarColor: getRandomAvatarColor(),
-    roleTitle: 'Team Member',
+    roleTitle: roleTitle || 'Product Designer',
   };
 
   users.push(newUser);
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+
+  if (password) {
+    try {
+      const passwordsMap: Record<string, string> = JSON.parse(
+        localStorage.getItem(PASSWORDS_STORAGE_KEY) || '{}'
+      );
+      passwordsMap[normalizedEmail] = password;
+      localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwordsMap));
+    } catch (e) {
+      console.error('Failed to save password locally:', e);
+    }
+  }
+
   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
   return newUser;
 }
